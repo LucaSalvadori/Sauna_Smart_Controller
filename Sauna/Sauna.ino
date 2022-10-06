@@ -19,7 +19,7 @@ Adafruit_SSD1306 display(S_W, S_H, &Wire, OLED_RESET);
 float tmp_int = 80.5;
 float tmp_off = 70;
 
- enum Pow_level {OFF, ONE, TWO, TREE};
+enum Pow_level {OFF, ONE, TWO, TREE};
 Pow_level power = OFF;
 Pow_level pow_max = TREE;
 
@@ -30,32 +30,118 @@ Programm programm = STANDBY;
 
 Page page = INFO;
 
- enum Settings {PROGRAMM, MAX_POW, SOLAR_READ, WIFI, WEB_SERVER, ERRORS};
+ enum Settings {PROGRAMM, MAX_POW, WIFI, WEB_SERVER, ERRORS};
 Settings setting = PROGRAMM;
 
  enum Errors {ERR_b, ERR_a}; //tmp
 //Errors error;
 
+bool wifi_on = false;
+bool web_server_on = false;
 
-void TaskDisplay( void *pvParameters );
+
+//void TaskDisplay( void *pvParameters );
 
 void setup() {
   Serial.begin(115200);
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
 
-   xTaskCreatePinnedToCore(
-      TaskBlink
-      ,  "TaskDisplay"   // A name just for humans
-      ,  1024  // This stack size can be checked & adjusted by reading the Stack Highwater
-      ,  NULL
-      ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
-      ,  NULL 
-      ,  ARDUINO_RUNNING_CORE
-   ); 
+  // Show initial display buffer contents on the screen --
+  // the library initializes this with an Adafruit splash screen.
+  display.display();
+  delay(2000); // Pause for 2 seconds
+
+  DrawInfo();
+
+  delay(5000);
+
+  DrawSetting();
+  
+  
+
+//   xTaskCreatePinnedToCore(
+//      TaskBlink
+//      ,  "TaskDisplay"   // A name just for humans
+//      ,  1024  // This stack size can be checked & adjusted by reading the Stack Highwater
+//      ,  NULL
+//      ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+//      ,  NULL 
+//      ,  ARDUINO_RUNNING_CORE
+//   ); 
+  
+  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
+}
+
+void DrawSetting(){
+  display.clearDisplay();
+  
+  display.setTextColor(SSD1306_WHITE);
+  
+  display.setTextSize(2);
+  display.setCursor(4, 7);
+
+  switch(setting){
+    case PROGRAMM: {
+      display.print(F("Programma"));
+      display.setCursor(4, 32);
+      switch(programm){
+        case STANDBY: {
+           display.print(F("Standby"));
+        }break;
+        case ON: {
+           display.print(F("ON"));
+        }break;
+        case ON_LOW_POW: {
+           display.print(F("ECO"));
+        }break;
+        case ERROR_PROGRAMM: {
+           display.print(F("ERROR"));
+        }break;
+      }
+    }break; 
+    case MAX_POW: {
+      display.print(F("Lim Potenza"));
+      display.setCursor(4, 32);
+      switch(pow_max){
+        case OFF: {
+           display.print(F("0 KW"));
+        }break;
+        case ONE: {
+           display.print(F("1.5 KW"));
+        }break;
+        case TWO: {
+           display.print(F("3  KW"));
+        }break;
+        case TREE: {
+           display.print(F("4.5 KW"));
+        }break;
+      }
+    }break;
+    case WIFI: {
+      display.print(F("WiFi"));
+      display.setCursor(4, 32);
+      display.print((wifi_on) ? F("ON") : F("OFF"));
+    }break;
+    case WEB_SERVER: {
+      display.print(F("Web Server"));
+      display.setCursor(4, 32);
+      display.print((web_server_on) ? F("ON") : F("OFF"));
+    }break;  
+    case ERRORS: {
+      display.print(F("Error"));
+    }break;  
+  }
+  
+  display.display(); // Show the display buffer on the screen
 }
 
 void DrawInfo(){
