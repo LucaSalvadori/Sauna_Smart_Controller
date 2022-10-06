@@ -3,6 +3,30 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+//pins
+#define RELAY_1 1
+#define RELAY_2 2
+#define RELAY_3 3
+#define ONE_WIRE_BUS 2
+// const static bool RELAY_ORDER[] [] = {
+//   {0b000, 0b000, 0b000}, // 0 resistor
+//   {0b001, 0b010, 0b100}, // 1 resistor
+//   {0b110, 0b011, 0b101}, // 2 resistor
+//   {0b111, 0b111, 0b111}  // 3 resistor
+// };
+
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// Data wire is plugged into port 2 on the Arduino
+
+
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
+
 #define S_W 128 // OLED display width, in pixels
 #define S_H 64 // OLED display height, in pixels
 
@@ -16,6 +40,7 @@
 
 Adafruit_SSD1306 display(S_W, S_H, &Wire, OLED_RESET);
 
+#define TEMP_DELTA 1.5 // temperature difference for heater activation
 float tmp_int = 80.5;
 float tmp_off = 70;
 
@@ -43,8 +68,10 @@ bool web_server_on = false;
 enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
 
 //void TaskDisplay( void *pvParameters );
+void draw();
 void DrawInfo();
 void DrawSetting();
+void navigate(Controll cont);
 
 void setup() {
   Serial.begin(115200);
@@ -53,6 +80,8 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;); // Don't proceed, loop forever
   }
+
+  sensors.begin(); //start temperature sensor
 
   // Show initial display buffer contents on the screen --
   // the library initializes this with an Adafruit splash screen.
@@ -82,6 +111,66 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+}
+
+void heaterControll(){
+  //read temperature
+  sensors.requestTemperatures(); // Send the command to get temperatures
+  Serial.println("DONE");
+  // After we got the temperatures, we can print them here.
+  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
+  float tempC = sensors.getTempCByIndex(0);
+
+  // Check if reading was successful
+  if(tempC != DEVICE_DISCONNECTED_C) 
+  {
+    Serial.print("Temperature for the device 1 (index 0) is: ");
+    Serial.println(tempC);
+
+    tmp_int = tempC;
+  } 
+  else
+  {
+    Serial.println("Error: Could not read temperature data");
+  }
+
+  //controll
+  if(power == OFF){
+    if(tmp_int < tmp_off - TEMP_DELTA){
+      power = pow_max;
+    }
+  }else{
+    if(tmp_int >= tmp_off){
+      power = OFF;
+    }else{
+      power = pow_max;
+    }
+  }
+
+  //relay update
+  switch (power) {
+    case TREE:{
+      digitalWrite(RELAY_3, 1);
+      digitalWrite(RELAY_2, 1);
+      digitalWrite(RELAY_1, 1);
+    }break;
+    case TWO: {
+      digitalWrite(RELAY_3, 1);
+      digitalWrite(RELAY_2, 0);
+      digitalWrite(RELAY_1, 1);
+    }break;
+    case ONE: {
+      digitalWrite(RELAY_3, 0);
+      digitalWrite(RELAY_2, 1);
+      digitalWrite(RELAY_1, 0);
+    }break;
+    case OFF:{
+      digitalWrite(RELAY_3, 0);
+      digitalWrite(RELAY_2, 0);
+      digitalWrite(RELAY_1, 0);
+    }break;
+  }
 
 }
 
@@ -134,7 +223,7 @@ void navigate(Controll cont) {
                   case STANDBY: {
                       switch (cont) {
                         case CLK: programm = ON; break;
-                        case ACLK: programm = ERROR_PROGRAMM; break;
+                        case ACLK: programm = ON_LOW_POW; break;
                       }
                     } break;
                   case ON: {
@@ -145,11 +234,11 @@ void navigate(Controll cont) {
                     } break;
                   case ON_LOW_POW: {
                       switch (cont) {
-                        case CLK: programm = ERROR_PROGRAMM; break;
+                        case CLK: programm = STANDBY; break;
                         case ACLK: programm = ON; break;
                       }
                     } break;
-                  case ERROR_PROGRAMM: {
+                  case ERROR_PROGRAMM: { //!!
                       switch (cont) {
                         case CLK: programm = STANDBY; break;
                         case ACLK: programm = ON_LOW_POW; break;
@@ -167,8 +256,8 @@ void navigate(Controll cont) {
               if (editSetting) {
                 switch (pow_max) {
                   case OFF: {
-                      switch (cont) {
-                        case CLK: pow_max = ONE; break;
+                      if(cont == CLK) {
+                        pow_max = ONE;
                       }
                     } break;
                   case ONE: {
@@ -184,8 +273,8 @@ void navigate(Controll cont) {
                       }
                     } break;
                   case TREE: {
-                      switch (cont) {
-                        case ACLK: pow_max = TWO; break;
+                      if(cont == ACLK) {
+                        pow_max = TWO;
                       }
                     } break;
                 }
@@ -225,6 +314,20 @@ void navigate(Controll cont) {
               }
             } break;
         }
+      } break;
+    case ERROR_PAGE: {
+        // da implm
+      } break;
+  }
+}
+
+void draw(){
+  switch (page) {
+    case INFO: {
+        DrawInfo();
+      } break;
+    case SETTING: {
+        DrawSetting();
       } break;
     case ERROR_PAGE: {
         // da implm
