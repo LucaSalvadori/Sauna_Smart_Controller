@@ -2,15 +2,20 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
+#include <Fonts/FreeSans24pt7b.h>
+#include <Fonts/FreeSans18pt7b.h>
+#include <Fonts/FreeSans12pt7b.h>
+#define FONT_24 FreeSans24pt7b
+#define FONT_18 FreeSans18pt7b
+#define FONT_12 FreeSans12pt7b
 //pins
-#define RELAY_1 1
-#define RELAY_2 2
-#define RELAY_3 3
-#define ONE_WIRE_BUS 2
-#define ROTARY_ENCODER_CKL 2
-#define ROTARY_ENCODER_DT 2
-#define ROTARY_ENCODER_SW 2
+#define RELAY_1 4
+#define RELAY_2 0
+#define RELAY_3 2
+#define ONE_WIRE_BUS 15
+#define ROTARY_ENCODER_CKL 19
+#define ROTARY_ENCODER_DT 18
+#define ROTARY_ENCODER_SW 5 
 
 // const static bool RELAY_ORDER[] [] = {
 //   {0b000, 0b000, 0b000}, // 0 resistor
@@ -19,45 +24,46 @@
 //   {0b111, 0b111, 0b111}  // 3 resistor
 // };
 
-#include <OneWire.h>
-#include <DallasTemperature.h>
-OneWire oneWire(ONE_WIRE_BUS);// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-DallasTemperature sensors(&oneWire);// Pass our oneWire reference to Dallas Temperature. 
+//#include <OneWire.h>
+//#include <DallasTemperature.h>
+//OneWire oneWire(ONE_WIRE_BUS);// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+//DallasTemperature sensors(&oneWire);// Pass our oneWire reference to Dallas Temperature. 
 
 #define S_W 128 // OLED display width, in pixels
 #define S_H 64 // OLED display height, in pixels
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_ADDRESS 0x78 //0x3D ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+#define SCREEN_ADDRESS 0x3C //0x3D ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(S_W, S_H, &Wire, OLED_RESET);
 
 #define TEMP_DELTA 1.5 // temperature difference for heater activation
-float tmp_int = 80.5;
-float tmp_off = 70;
+float tmp_int = 80.5; //-!-
+float tmp_off = 70;   //-!-
 
 enum Pow_level {OFF, ONE, TWO, TREE};
-Pow_level power = OFF;
-Pow_level pow_max = TREE;
+Pow_level power = ONE; //-!-
+Pow_level pow_max = TWO; //-!-
 
 enum Programm {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAMM};
-Programm programm = STANDBY;
+Programm programm = STANDBY; //-!-
 
 enum Page {INFO, SETTING, ERROR_PAGE};
-Page page = INFO;
+Page page = INFO; //-!-
 
 enum Settings {TEMPERATURE, PROGRAMM, MAX_POW, WIFI, WEB_SERVER, ERRORS};
-Settings setting = PROGRAMM;
-bool editSetting = false;
+Settings setting = MAX_POW; //-!-
+bool editSetting = false; //-!-?
 
 enum Errors {ERR_b, ERR_a}; //tmp
 //Errors error;
 
-bool wifi_on = false;
-bool web_server_on = false;
+bool wifi_on = false; //-!-
+bool web_server_on = false; //-!-
 
 enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
 
-int encoder_rotation_direction = 0;
+int encoder_rotation_direction = 0; //-!-
+long int lastEncoderMillis =  0;
 
 //--Functions--
 //void TaskDisplay( void *pvParameters );
@@ -65,9 +71,10 @@ void draw();
 void DrawInfo();
 void DrawSetting();
 void navigate(Controll cont);
+void IRAM_ATTR isr_rotary_encoder();
 
 void setup() {
-  
+
   pinMode(ROTARY_ENCODER_CKL, INPUT);
   pinMode(ROTARY_ENCODER_DT, INPUT);
   pinMode(ROTARY_ENCODER_SW, INPUT);
@@ -75,24 +82,14 @@ void setup() {
 
 
   Serial.begin(115200);
+  Serial.println(F("Hello"));
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;); // Don't proceed, loop forever
   }
+  
 
-  sensors.begin(); //start temperature sensor
-
-  // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
-  display.display();
-  delay(2000); // Pause for 2 seconds
-
-  DrawInfo();
-
-  delay(5000);
-
-  DrawSetting();
 
   //   xTaskCreatePinnedToCore(
   //      TaskBlink
@@ -107,80 +104,99 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  delay(4000); // Pause for 2 seconds
 
+  DrawInfo();
+
+  delay(4000);
+
+  DrawSetting();
 }
 
 void IRAM_ATTR isr_rotary_encoder() {
 	bool state = digitalRead(ROTARY_ENCODER_CKL);
-  if(digitalRead(ROTARY_ENCODER_DT) != state){
-    //clockwise
-    encoder_rotation_direction++;
-  } else {
-    //anti-clockwise
-    encoder_rotation_direction--;
+ long int encoderMillis =  millis();
+  if(lastEncoderMillis + 10 <  encoderMillis){
+    lastEncoderMillis = encoderMillis;
+    Serial.print(encoderMillis);
+    Serial.print(" -> ");
+    Serial.print(digitalRead(ROTARY_ENCODER_CKL));
+    Serial.print(" - ");
+    if(digitalRead(ROTARY_ENCODER_DT) != state){
+      //clockwise
+      encoder_rotation_direction++;
+      
+      Serial.print(encoder_rotation_direction);
+    } else {
+      //anti-clockwise
+      encoder_rotation_direction--;
+      Serial.print(encoder_rotation_direction);
+    }
+    Serial.println();
   }
+  
 }
 
 
-void heaterControll(){
-  //read temperature
-  sensors.requestTemperatures(); // Send the command to get temperatures
-  Serial.println("DONE");
-  // After we got the temperatures, we can print them here.
-  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
-  float tempC = sensors.getTempCByIndex(0);
-
-  // Check if reading was successful
-  if(tempC != DEVICE_DISCONNECTED_C) 
-  {
-    Serial.print("Temperature for the device 1 (index 0) is: ");
-    Serial.println(tempC);
-
-    tmp_int = tempC;
-  } 
-  else
-  {
-    Serial.println("Error: Could not read temperature data");
-  }
-
-  //controll
-  if(power == OFF){
-    if(tmp_int < tmp_off - TEMP_DELTA){
-      power = pow_max;
-    }
-  }else{
-    if(tmp_int >= tmp_off){
-      power = OFF;
-    }else{
-      power = pow_max;
-    }
-  }
-
-  //relay update
-  switch (power) {
-    case TREE:{
-      digitalWrite(RELAY_3, 1);
-      digitalWrite(RELAY_2, 1);
-      digitalWrite(RELAY_1, 1);
-    }break;
-    case TWO: {
-      digitalWrite(RELAY_3, 1);
-      digitalWrite(RELAY_2, 0);
-      digitalWrite(RELAY_1, 1);
-    }break;
-    case ONE: {
-      digitalWrite(RELAY_3, 0);
-      digitalWrite(RELAY_2, 1);
-      digitalWrite(RELAY_1, 0);
-    }break;
-    case OFF:{
-      digitalWrite(RELAY_3, 0);
-      digitalWrite(RELAY_2, 0);
-      digitalWrite(RELAY_1, 0);
-    }break;
-  }
-
-}
+//void heaterControll(){
+//  //read temperature
+////  sensors.requestTemperatures(); // Send the command to get temperatures
+//  Serial.println("DONE");
+//  // After we got the temperatures, we can print them here.
+//  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
+// // float tempC = sensors.getTempCByIndex(0);
+//
+//  // Check if reading was successful
+//  if(tempC != DEVICE_DISCONNECTED_C) 
+//  {
+//    Serial.print("Temperature for the device 1 (index 0) is: ");
+//    Serial.println(tempC);
+//
+//    tmp_int = tempC;
+//  } 
+//  else
+//  {
+//    Serial.println("Error: Could not read temperature data");
+//  }
+//
+//  //controll
+//  if(power == OFF){
+//    if(tmp_int < tmp_off - TEMP_DELTA){
+//      power = pow_max;
+//    }
+//  }else{
+//    if(tmp_int >= tmp_off){
+//      power = OFF;
+//    }else{
+//      power = pow_max;
+//    }
+//  }
+//
+//  //relay update
+//  switch (power) {
+//    case TREE:{
+//      digitalWrite(RELAY_3, 1);
+//      digitalWrite(RELAY_2, 1);
+//      digitalWrite(RELAY_1, 1);
+//    }break;
+//    case TWO: {
+//      digitalWrite(RELAY_3, 1);
+//      digitalWrite(RELAY_2, 0);
+//      digitalWrite(RELAY_1, 1);
+//    }break;
+//    case ONE: {
+//      digitalWrite(RELAY_3, 0);
+//      digitalWrite(RELAY_2, 1);
+//      digitalWrite(RELAY_1, 0);
+//    }break;
+//    case OFF:{
+//      digitalWrite(RELAY_3, 0);
+//      digitalWrite(RELAY_2, 0);
+//      digitalWrite(RELAY_1, 0);
+//    }break;
+//  }
+//
+//}
 
 void navigate(Controll cont) {
   switch (page) {
@@ -347,19 +363,19 @@ void DrawSetting() {
   display.clearDisplay();
 
   display.setTextColor(SSD1306_WHITE);
-
-  display.setTextSize(2);
-  display.setCursor(4, 7);
+  display.setFont(&FONT_12);
+  display.setTextSize(1);
+  display.setCursor(4, 24);
 
   switch (setting) {
     case TEMPERATURE: {
         display.print(F("Temperatura"));
-        display.setCursor(4, 32);
+        display.setCursor(4, S_H-5);
         display.print(tmp_off);
       } break;
     case PROGRAMM: {
         display.print(F("Programma"));
-        display.setCursor(4, 32);
+        display.setCursor(4, S_H-5);
         switch (programm) {
           case STANDBY: {
               display.print(F("Standby"));
@@ -376,8 +392,8 @@ void DrawSetting() {
         }
       } break;
     case MAX_POW: {
-        display.print(F("Lim Potenza"));
-        display.setCursor(4, 32);
+        display.print(F("Lim Pot"));
+        display.setCursor(4, S_H-5);
         switch (pow_max) {
           case OFF: {
               display.print(F("0 KW"));
@@ -395,12 +411,12 @@ void DrawSetting() {
       } break;
     case WIFI: {
         display.print(F("WiFi"));
-        display.setCursor(4, 32);
+        display.setCursor(4, S_H-5);
         display.print((wifi_on) ? F("ON") : F("OFF"));
       } break;
     case WEB_SERVER: {
         display.print(F("Web Server"));
-        display.setCursor(4, 32);
+        display.setCursor(4, S_H-5);
         display.print((web_server_on) ? F("ON") : F("OFF"));
       } break;
     case ERRORS: {
@@ -412,12 +428,25 @@ void DrawSetting() {
 }
 
 void DrawInfo() {
+  
   display.clearDisplay();
 
+  for (int i = 0; i < 3; i++) {
+    display.fillRoundRect(
+      S_W - 6, (i * (S_H/3)),
+      6, ((S_H/3)-5),
+      2, 
+      SSD1306_WHITE
+      );
+  }
   // draw current power line
-  for (int i = 0; i < power; i++) {
-
-    display.drawLine(S_W - 5, (i * 19) + ((i + 1) * 2), S_W - 5, (i * 22), SSD1306_WHITE);
+  for (int i = 0; i < ((power-3)*-1); i++) {
+    display.fillRoundRect(
+      S_W - 5, (i * (S_H/3))+1,
+      4, ((S_H/3)-5)-2,
+      2, 
+      SSD1306_BLACK
+      );
   }
 
   //draw max power triangle
@@ -437,13 +466,17 @@ void DrawInfo() {
   );
 
   //draw current temperature
-  display.setTextSize(8);
+  display.setFont(&FONT_24);
+  display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 2);
+  display.setCursor(0, S_H-5);
   int tmp_integer = tmp_int;
   int tmp_decimal = (tmp_int - tmp_integer) * 10;
   display.print(tmp_integer);
-  display.setTextSize(4);
+  display.setFont(&FONT_12);
+  display.setTextSize(1);
+  //display.setCursor(90,S_H-5);
+  display.print(".");
   display.print(tmp_decimal);
 
 
