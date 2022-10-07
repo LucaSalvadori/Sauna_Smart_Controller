@@ -8,6 +8,10 @@
 #define RELAY_2 2
 #define RELAY_3 3
 #define ONE_WIRE_BUS 2
+#define ROTARY_ENCODER_CKL 2
+#define ROTARY_ENCODER_DT 2
+#define ROTARY_ENCODER_SW 2
+
 // const static bool RELAY_ORDER[] [] = {
 //   {0b000, 0b000, 0b000}, // 0 resistor
 //   {0b001, 0b010, 0b100}, // 1 resistor
@@ -17,27 +21,14 @@
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
-// Data wire is plugged into port 2 on the Arduino
-
-
-// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-OneWire oneWire(ONE_WIRE_BUS);
-
-// Pass our oneWire reference to Dallas Temperature. 
-DallasTemperature sensors(&oneWire);
+OneWire oneWire(ONE_WIRE_BUS);// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+DallasTemperature sensors(&oneWire);// Pass our oneWire reference to Dallas Temperature. 
 
 #define S_W 128 // OLED display width, in pixels
 #define S_H 64 // OLED display height, in pixels
-
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-// The pins for I2C are defined by the Wire-library.
-// On an arduino UNO:       A4(SDA), A5(SCL)
-// On an arduino MEGA 2560: 20(SDA), 21(SCL)
-// On an arduino LEONARDO:   2(SDA),  3(SCL), ...
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x78 //0x3D ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
-
 Adafruit_SSD1306 display(S_W, S_H, &Wire, OLED_RESET);
 
 #define TEMP_DELTA 1.5 // temperature difference for heater activation
@@ -52,7 +43,6 @@ enum Programm {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAMM};
 Programm programm = STANDBY;
 
 enum Page {INFO, SETTING, ERROR_PAGE};
-
 Page page = INFO;
 
 enum Settings {TEMPERATURE, PROGRAMM, MAX_POW, WIFI, WEB_SERVER, ERRORS};
@@ -67,6 +57,9 @@ bool web_server_on = false;
 
 enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
 
+int encoder_rotation_direction = 0;
+
+//--Functions--
 //void TaskDisplay( void *pvParameters );
 void draw();
 void DrawInfo();
@@ -74,6 +67,13 @@ void DrawSetting();
 void navigate(Controll cont);
 
 void setup() {
+  
+  pinMode(ROTARY_ENCODER_CKL, INPUT);
+  pinMode(ROTARY_ENCODER_DT, INPUT);
+  pinMode(ROTARY_ENCODER_SW, INPUT);
+  attachInterrupt(ROTARY_ENCODER_CKL, isr_rotary_encoder, CHANGE);
+
+
   Serial.begin(115200);
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -94,8 +94,6 @@ void setup() {
 
   DrawSetting();
 
-
-
   //   xTaskCreatePinnedToCore(
   //      TaskBlink
   //      ,  "TaskDisplay"   // A name just for humans
@@ -105,14 +103,24 @@ void setup() {
   //      ,  NULL
   //      ,  ARDUINO_RUNNING_CORE
   //   );
-
-
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
 }
+
+void IRAM_ATTR isr_rotary_encoder() {
+	bool state = digitalRead(ROTARY_ENCODER_CKL);
+  if(digitalRead(ROTARY_ENCODER_DT) != state){
+    //clockwise
+    encoder_rotation_direction++;
+  } else {
+    //anti-clockwise
+    encoder_rotation_direction--;
+  }
+}
+
 
 void heaterControll(){
   //read temperature
