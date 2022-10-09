@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Arduino.h> //!!
 #include <Fonts/FreeSans24pt7b.h>
 #include <Fonts/FreeSans18pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
@@ -13,21 +14,17 @@
 #define RELAY_2 0
 #define RELAY_3 2
 #define ONE_WIRE_BUS 15
-#define ROTARY_ENCODER_CKL 19
-#define ROTARY_ENCODER_DT 18
-#define ROTARY_ENCODER_SW 5 
 
-// const static bool RELAY_ORDER[] [] = {
-//   {0b000, 0b000, 0b000}, // 0 resistor
-//   {0b001, 0b010, 0b100}, // 1 resistor
-//   {0b110, 0b011, 0b101}, // 2 resistor
-//   {0b111, 0b111, 0b111}  // 3 resistor
-// };
+#define ROTARY_PINA 19
+#define ROTARY_PINB 18
+#define ROTARY_PINSW 5
+
+portMUX_TYPE gpioMux = portMUX_INITIALIZER_UNLOCKED;
 
 //#include <OneWire.h>
 //#include <DallasTemperature.h>
 //OneWire oneWire(ONE_WIRE_BUS);// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-//DallasTemperature sensors(&oneWire);// Pass our oneWire reference to Dallas Temperature. 
+//DallasTemperature sensors(&oneWire);// Pass our oneWire reference to Dallas Temperature.
 
 #define S_W 128 // OLED display width, in pixels
 #define S_H 64 // OLED display height, in pixels
@@ -62,8 +59,13 @@ bool web_server_on = false; //-!-
 
 enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
 
-int encoder_rotation_direction = 0; //-!-
-long int lastEncoderMillis =  0;
+//encoder and switch
+long int millisLastEncoderChange =  0;
+long int millisLastSwPress =  0;
+uint8_t stateEncoder = 0;
+bool switchPressed = 0;
+int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
+
 
 //--Functions--
 //void TaskDisplay( void *pvParameters );
@@ -72,14 +74,24 @@ void DrawInfo();
 void DrawSetting();
 void navigate(Controll cont);
 void IRAM_ATTR isr_rotary_encoder();
+void IRAM_ATTR isrAB();
+void IRAM_ATTR isrSWAll();
+void input_read();
 
 void setup() {
 
-  pinMode(ROTARY_ENCODER_CKL, INPUT);
-  pinMode(ROTARY_ENCODER_DT, INPUT);
-  pinMode(ROTARY_ENCODER_SW, INPUT);
-  attachInterrupt(ROTARY_ENCODER_CKL, isr_rotary_encoder, CHANGE);
+  // pinMode(ROTARY_ENCODER_CKL, INPUT);
+  // pinMode(ROTARY_ENCODER_DT, INPUT);
+  // pinMode(ROTARY_ENCODER_SW, INPUT);
+  // attachInterrupt(ROTARY_ENCODER_CKL, isr_rotary_encoder, CHANGE);
 
+  pinMode(ROTARY_PINA, INPUT_PULLUP);
+  pinMode(ROTARY_PINB, INPUT_PULLUP);
+  pinMode(ROTARY_PINSW, INPUT_PULLUP);
+
+  attachInterrupt(ROTARY_PINA, isrAB, CHANGE);
+  attachInterrupt(ROTARY_PINB, isrAB, CHANGE);
+  attachInterrupt(ROTARY_PINSW, isrSWAll, CHANGE);
 
   Serial.begin(115200);
   Serial.println(F("Hello"));
@@ -88,7 +100,7 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;); // Don't proceed, loop forever
   }
-  
+
 
 
   //   xTaskCreatePinnedToCore(
@@ -103,39 +115,90 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  delay(4000); // Pause for 2 seconds
+  int i = 0;
 
-  DrawInfo();
-
-  delay(4000);
-
-  DrawSetting();
-}
-
-void IRAM_ATTR isr_rotary_encoder() {
-	bool state = digitalRead(ROTARY_ENCODER_CKL);
- long int encoderMillis =  millis();
-  if(lastEncoderMillis + 10 <  encoderMillis){
-    lastEncoderMillis = encoderMillis;
-    Serial.print(encoderMillis);
-    Serial.print(" -> ");
-    Serial.print(digitalRead(ROTARY_ENCODER_CKL));
-    Serial.print(" - ");
-    if(digitalRead(ROTARY_ENCODER_DT) != state){
-      //clockwise
-      encoder_rotation_direction++;
-      
-      Serial.print(encoder_rotation_direction);
-    } else {
-      //anti-clockwise
-      encoder_rotation_direction--;
-      Serial.print(encoder_rotation_direction);
+  while (true) {
+    if (i % 10 == 0) {
+      Serial.print("isrSWAll ");
+      Serial.print(swNTimesPressed);
+      Serial.print(" Encoder ");
+      Serial.println(rotValueEncoder);
     }
-    Serial.println();
+
+
+    input_read();
+    draw();
+    delay(100); // Pause for 2 seconds
   }
-  
 }
+
+void input_read() { //to redo
+  //critical
+  portENTER_CRITICAL_ISR(&gpioMux);
+  int rotDifference = rotValueEncoder - lastRotValueEncoder;
+  int swdifference = swNTimesPressed - lastSwNTimesPressed;
+  bool longPress = (switchPressed && millisLastSwPress + 1000 < millis());
+  lastRotValueEncoder = rotValueEncoder;
+  lastSwNTimesPressed = swNTimesPressed;
+  portEXIT_CRITICAL_ISR(&gpioMux);
+  //end critical
+
+  for (int i = 0; i < abs(rotDifference / 2); i++) {
+    navigate((rotDifference > 0) ? CLK : ACLK);
+  }
+
+  for (int i = 0; i < swdifference; i++) {
+    navigate(CLICK);
+  }
+
+  if (longPress) {
+    navigate(LONG_CLICK);
+  }
+}
+
+
+void IRAM_ATTR isrSWAll() {
+  long int encoderMillis =  millis();
+  portENTER_CRITICAL_ISR(&gpioMux);
+  if (millisLastEncoderChange + 20 <  encoderMillis && digitalRead(ROTARY_PINSW) == switchPressed) { // lo stato è cambiato e è passato abbastanza tempo
+    if (switchPressed) {
+      switchPressed = false;
+      if (millisLastSwPress + 1000 > encoderMillis) { //ignore long press
+        swNTimesPressed++;
+      }
+    } else {
+      switchPressed = true;
+      millisLastSwPress = encoderMillis;
+    }
+    millisLastEncoderChange = encoderMillis;
+  }
+  portEXIT_CRITICAL_ISR(&gpioMux);
+
+}
+
+void IRAM_ATTR isrAB() {
+  uint8_t s = stateEncoder & 3;
+
+  portENTER_CRITICAL_ISR(&gpioMux);
+  if (digitalRead(ROTARY_PINA)) s |= 4;
+  if (digitalRead(ROTARY_PINB)) s |= 8;
+  switch (s) {
+    case 0: case 5: case 10: case 15:
+      break;
+    case 1: case 7: case 8: case 14:
+      rotValueEncoder++; break;
+    case 2: case 4: case 11: case 13:
+      rotValueEncoder--; break;
+    case 3: case 12:
+      rotValueEncoder += 2; break;
+    default:
+      rotValueEncoder -= 2; break;
+  }
+  stateEncoder = (s >> 2);
+  portEXIT_CRITICAL_ISR(&gpioMux);
+
+}
+
 
 
 //void heaterControll(){
@@ -147,13 +210,13 @@ void IRAM_ATTR isr_rotary_encoder() {
 // // float tempC = sensors.getTempCByIndex(0);
 //
 //  // Check if reading was successful
-//  if(tempC != DEVICE_DISCONNECTED_C) 
+//  if(tempC != DEVICE_DISCONNECTED_C)
 //  {
 //    Serial.print("Temperature for the device 1 (index 0) is: ");
 //    Serial.println(tempC);
 //
 //    tmp_int = tempC;
-//  } 
+//  }
 //  else
 //  {
 //    Serial.println("Error: Could not read temperature data");
@@ -246,33 +309,33 @@ void navigate(Controll cont) {
                 switch (programm) {
                   case STANDBY: {
                       switch (cont) {
-                        case CLK: programm = ON; break;
-                        case ACLK: programm = ON_LOW_POW; break;
+                        case CLK: {programm = ON; }break;
+                        case ACLK: { programm = ON_LOW_POW;}  break;
                       }
                     } break;
                   case ON: {
                       switch (cont) {
-                        case CLK: programm = ON_LOW_POW; break;
-                        case ACLK: programm = STANDBY; break;
+                        case CLK: { programm = ON_LOW_POW;}  break;
+                        case ACLK: { programm = STANDBY;}  break;
                       }
                     } break;
                   case ON_LOW_POW: {
                       switch (cont) {
-                        case CLK: programm = STANDBY; break;
-                        case ACLK: programm = ON; break;
+                        case CLK: { programm = STANDBY;}  break;
+                        case ACLK: { programm = ON;}  break;
                       }
                     } break;
                   case ERROR_PROGRAMM: { //!!
                       switch (cont) {
-                        case CLK: programm = STANDBY; break;
-                        case ACLK: programm = ON_LOW_POW; break;
+                        case CLK: { programm = STANDBY;}  break;
+                        case ACLK: { programm = ON_LOW_POW;}  break;
                       }
                     } break;
                 }
               } else {
                 switch (cont) {
-                  case CLK: setting = MAX_POW; break;
-                  case ACLK: setting = ERRORS; break;
+                  case CLK: { setting = MAX_POW;}  break;
+                  case ACLK: { setting = ERRORS;}  break;
                 }
               }
             } break;
@@ -280,24 +343,24 @@ void navigate(Controll cont) {
               if (editSetting) {
                 switch (pow_max) {
                   case OFF: {
-                      if(cont == CLK) {
+                      if (cont == CLK) {
                         pow_max = ONE;
                       }
                     } break;
                   case ONE: {
                       switch (cont) {
-                        case CLK: pow_max = TWO; break;
-                        case ACLK: pow_max = TREE; break;
+                        case CLK: { pow_max = TWO;}  break;
+                        case ACLK: { pow_max = TREE;}  break;
                       }
                     } break;
                   case TWO: {
                       switch (cont) {
-                        case CLK: pow_max = TREE; break;
-                        case ACLK: pow_max = ONE; break;
+                        case CLK: { pow_max = TREE;}  break;
+                        case ACLK: { pow_max = ONE;}  break;
                       }
                     } break;
                   case TREE: {
-                      if(cont == ACLK) {
+                      if (cont == ACLK) {
                         pow_max = TWO;
                       }
                     } break;
@@ -305,8 +368,8 @@ void navigate(Controll cont) {
 
               } else {
                 switch (cont) {
-                  case CLK: setting = WIFI; break;
-                  case ACLK: setting = PROGRAMM; break;
+                  case CLK: { setting = WIFI;}  break;
+                  case ACLK: { setting = PROGRAMM;}  break;
                 }
               }
 
@@ -316,8 +379,8 @@ void navigate(Controll cont) {
                 wifi_on = !wifi_on;
               } else {
                 switch (cont) {
-                  case CLK: setting = WEB_SERVER; break;
-                  case ACLK: setting = MAX_POW; break;
+                  case CLK: { setting = WEB_SERVER;}  break;
+                  case ACLK: { setting = MAX_POW;}  break;
                 }
               }
             } break;
@@ -326,15 +389,15 @@ void navigate(Controll cont) {
                 web_server_on = !web_server_on;
               } else {
                 switch (cont) {
-                  case CLK: setting = ERRORS; break;
-                  case ACLK: setting = WIFI; break;
+                  case CLK: { setting = ERRORS;}  break;
+                  case ACLK: { setting = WIFI;}  break;
                 }
               }
             } break;
           case ERRORS: {
               switch (cont) {
-                case CLK: setting = PROGRAMM; break;
-                case ACLK: setting = WEB_SERVER; break;
+                case CLK: { setting = PROGRAMM;}  break;
+                case ACLK: { setting = WEB_SERVER;}  break;
               }
             } break;
         }
@@ -345,7 +408,7 @@ void navigate(Controll cont) {
   }
 }
 
-void draw(){
+void draw() {
   switch (page) {
     case INFO: {
         DrawInfo();
@@ -369,13 +432,13 @@ void DrawSetting() {
 
   switch (setting) {
     case TEMPERATURE: {
-        display.print(F("Temperatura"));
-        display.setCursor(4, S_H-5);
+        display.print(F("Temp"));
+        display.setCursor(4, S_H - 5);
         display.print(tmp_off);
       } break;
     case PROGRAMM: {
         display.print(F("Programma"));
-        display.setCursor(4, S_H-5);
+        display.setCursor(4, S_H - 5);
         switch (programm) {
           case STANDBY: {
               display.print(F("Standby"));
@@ -393,7 +456,7 @@ void DrawSetting() {
       } break;
     case MAX_POW: {
         display.print(F("Lim Pot"));
-        display.setCursor(4, S_H-5);
+        display.setCursor(4, S_H - 5);
         switch (pow_max) {
           case OFF: {
               display.print(F("0 KW"));
@@ -411,12 +474,12 @@ void DrawSetting() {
       } break;
     case WIFI: {
         display.print(F("WiFi"));
-        display.setCursor(4, S_H-5);
+        display.setCursor(4, S_H - 5);
         display.print((wifi_on) ? F("ON") : F("OFF"));
       } break;
     case WEB_SERVER: {
         display.print(F("Web Server"));
-        display.setCursor(4, S_H-5);
+        display.setCursor(4, S_H - 5);
         display.print((web_server_on) ? F("ON") : F("OFF"));
       } break;
     case ERRORS: {
@@ -428,25 +491,25 @@ void DrawSetting() {
 }
 
 void DrawInfo() {
-  
+
   display.clearDisplay();
 
   for (int i = 0; i < 3; i++) {
     display.fillRoundRect(
-      S_W - 6, (i * (S_H/3)),
-      6, ((S_H/3)-5),
-      2, 
+      S_W - 6, (i * (S_H / 3)),
+      6, ((S_H / 3) - 5),
+      2,
       SSD1306_WHITE
-      );
+    );
   }
   // draw current power line
-  for (int i = 0; i < ((power-3)*-1); i++) {
+  for (int i = 0; i < ((power - 3) * -1); i++) {
     display.fillRoundRect(
-      S_W - 5, (i * (S_H/3))+1,
-      4, ((S_H/3)-5)-2,
-      2, 
+      S_W - 5, (i * (S_H / 3)) + 1,
+      4, ((S_H / 3) - 5) - 2,
+      2,
       SSD1306_BLACK
-      );
+    );
   }
 
   //draw max power triangle
@@ -469,7 +532,7 @@ void DrawInfo() {
   display.setFont(&FONT_24);
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, S_H-5);
+  display.setCursor(0, S_H - 5);
   int tmp_integer = tmp_int;
   int tmp_decimal = (tmp_int - tmp_integer) * 10;
   display.print(tmp_integer);
