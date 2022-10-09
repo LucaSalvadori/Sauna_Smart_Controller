@@ -80,10 +80,7 @@ void input_read();
 
 void setup() {
 
-  // pinMode(ROTARY_ENCODER_CKL, INPUT);
-  // pinMode(ROTARY_ENCODER_DT, INPUT);
-  // pinMode(ROTARY_ENCODER_SW, INPUT);
-  // attachInterrupt(ROTARY_ENCODER_CKL, isr_rotary_encoder, CHANGE);
+  
 
   pinMode(ROTARY_PINA, INPUT_PULLUP);
   pinMode(ROTARY_PINB, INPUT_PULLUP);
@@ -118,8 +115,8 @@ void loop() {
   int i = 0;
 
   while (true) {
-    if (i % 10 == 0) {
-      Serial.print("isrSWAll ");
+    if (i % 30 == 0) {
+      Serial.print("SW ");
       Serial.print(swNTimesPressed);
       Serial.print(" Encoder ");
       Serial.println(rotValueEncoder);
@@ -128,6 +125,7 @@ void loop() {
 
     input_read();
     draw();
+    heaterControll();
     delay(100); // Pause for 2 seconds
   }
 }
@@ -143,7 +141,7 @@ void input_read() { //to redo
   portEXIT_CRITICAL_ISR(&gpioMux);
   //end critical
 
-  for (int i = 0; i < abs(rotDifference / 2); i++) {
+  for (int i = 0; i < abs((int) rotDifference / 2); i++) {
     navigate((rotDifference > 0) ? CLK : ACLK);
   }
 
@@ -201,15 +199,14 @@ void IRAM_ATTR isrAB() {
 
 
 
-//void heaterControll(){
-//  //read temperature
-////  sensors.requestTemperatures(); // Send the command to get temperatures
-//  Serial.println("DONE");
-//  // After we got the temperatures, we can print them here.
-//  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
-// // float tempC = sensors.getTempCByIndex(0);
-//
-//  // Check if reading was successful
+void heaterControll(){
+  //read temperature
+//  sensors.requestTemperatures(); // Send the command to get temperatures
+  // After we got the temperatures, we can print them here.
+  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
+ // float tempC = sensors.getTempCByIndex(0);
+
+  // Check if reading was successful
 //  if(tempC != DEVICE_DISCONNECTED_C)
 //  {
 //    Serial.print("Temperature for the device 1 (index 0) is: ");
@@ -221,21 +218,21 @@ void IRAM_ATTR isrAB() {
 //  {
 //    Serial.println("Error: Could not read temperature data");
 //  }
-//
-//  //controll
-//  if(power == OFF){
-//    if(tmp_int < tmp_off - TEMP_DELTA){
-//      power = pow_max;
-//    }
-//  }else{
-//    if(tmp_int >= tmp_off){
-//      power = OFF;
-//    }else{
-//      power = pow_max;
-//    }
-//  }
-//
-//  //relay update
+
+  //controll
+  if(power == OFF){
+    if(tmp_int < tmp_off - TEMP_DELTA){
+      power = pow_max;
+    }
+  }else{
+    if(tmp_int >= tmp_off){
+      power = OFF;
+    }else{
+      power = pow_max;
+    }
+  }
+
+  //relay update
 //  switch (power) {
 //    case TREE:{
 //      digitalWrite(RELAY_3, 1);
@@ -258,8 +255,8 @@ void IRAM_ATTR isrAB() {
 //      digitalWrite(RELAY_1, 0);
 //    }break;
 //  }
-//
-//}
+
+}
 
 void navigate(Controll cont) {
   switch (page) {
@@ -299,7 +296,7 @@ void navigate(Controll cont) {
           return;
         }
 
-        if (cont == CLK) {
+        if (cont == CLICK) {
           editSetting = !editSetting;
           return;
         }
@@ -348,9 +345,8 @@ void navigate(Controll cont) {
                       }
                     } break;
                   case ONE: {
-                      switch (cont) {
-                        case CLK: { pow_max = TWO;}  break;
-                        case ACLK: { pow_max = TREE;}  break;
+                      if (cont == CLK) {
+                        pow_max = TWO;
                       }
                     } break;
                   case TWO: {
@@ -376,7 +372,11 @@ void navigate(Controll cont) {
             } break;
           case WIFI: {
               if (editSetting) {
-                wifi_on = !wifi_on;
+                switch (cont) {
+                  case CLK: { wifi_on = true;}  break;
+                  case ACLK: { wifi_on = false;}  break;
+                }
+                //wifi_on = !wifi_on;
               } else {
                 switch (cont) {
                   case CLK: { setting = WEB_SERVER;}  break;
@@ -386,7 +386,11 @@ void navigate(Controll cont) {
             } break;
           case WEB_SERVER: {
               if (editSetting) {
-                web_server_on = !web_server_on;
+                switch (cont) {
+                  case CLK: { web_server_on = true;}  break;
+                  case ACLK: { web_server_on = false;}  break;
+                }
+               // web_server_on = !web_server_on;
               } else {
                 switch (cont) {
                   case CLK: { setting = ERRORS;}  break;
@@ -395,6 +399,7 @@ void navigate(Controll cont) {
               }
             } break;
           case ERRORS: {
+              editSetting = false; //to redo
               switch (cont) {
                 case CLK: { setting = PROGRAMM;}  break;
                 case ACLK: { setting = WEB_SERVER;}  break;
@@ -486,7 +491,11 @@ void DrawSetting() {
         display.print(F("Error"));
       } break;
   }
-
+  
+  if(editSetting){
+    display.print(F(" #"));
+  }
+  
   display.display(); // Show the display buffer on the screen
 }
 
