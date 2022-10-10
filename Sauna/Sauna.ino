@@ -64,7 +64,7 @@ long int millisLastEncoderChange =  0;
 long int millisLastSwPress =  0;
 uint8_t stateEncoder = 0;
 bool switchPressed = 0;
-int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
+int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0; //should implement queue
 
 
 //--Functions--
