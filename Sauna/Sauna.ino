@@ -17,7 +17,7 @@ void initControls();
 void navigate(Controll cont);
 void IRAM_ATTR isr_rotary_encoder();
 void IRAM_ATTR isrAB();
-void IRAM_ATTR isrSWAll();
+void IRAM_ATTR isrSW();
 void input_read();
 
 bool initHeater();
@@ -63,6 +63,7 @@ void loop() {
     input_read();
     draw();
     heaterControll();
-    delay(100); // Pause for 2 seconds
+    //delay(100); // Pause for 2 seconds
+    vTaskDelay(100/portTICK_PERIOD_MS);
   }
 }

@@ -12,23 +12,30 @@
 
 
 
-portMUX_TYPE gpioMux = portMUX_INITIALIZER_UNLOCKED;
+//portMUX_TYPE gpioMux = portMUX_INITIALIZER_UNLOCKED;
+
+
+static const int msg_queue_len = 100;     // Size of msg_queue
+static QueueHandle_t msg_queue;
+
+SemaphoreHandle_t xSemaphore;
 
 
 enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
 
 //encoder and switch
-long int millisLastEncoderChange =  0;
-long int millisLastSwPress =  0;
-uint8_t stateEncoder = 0;
-bool switchPressed = 0;
-int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
+volatile long int millisLastEncoderChange =  0;
+volatile long int millisLastSwPress =  0;
+volatile uint8_t stateEncoder = 0;
+volatile bool switchPressed = 0;
+volatile int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
+Controll cBuff;
 
 void initControls();
 void navigate(Controll cont);
 void IRAM_ATTR isr_rotary_encoder();
 void IRAM_ATTR isrAB();
-void IRAM_ATTR isrSWAll();
+void IRAM_ATTR isrSW();
 void input_read();
 
 void initControls() {
@@ -38,74 +45,107 @@ void initControls() {
 
   attachInterrupt(ROTARY_PINA, isrAB, CHANGE);
   attachInterrupt(ROTARY_PINB, isrAB, CHANGE);
-  attachInterrupt(ROTARY_PINSW, isrSWAll, CHANGE);
+  attachInterrupt(ROTARY_PINSW, isrSW, CHANGE);
+
+  msg_queue = xQueueCreate(msg_queue_len, sizeof(Controll));
+  xSemaphore = xSemaphoreCreateBinary();
+  xSemaphoreGive(xSemaphore);
 }
 
 void input_read() { //to redo
   //critical
-  portENTER_CRITICAL_ISR(&gpioMux);
-  int rotDifference = rotValueEncoder - lastRotValueEncoder;
-  int swdifference = swNTimesPressed - lastSwNTimesPressed;
-  bool longPress = (switchPressed && millisLastSwPress + 1000 < millis());
-  lastRotValueEncoder = rotValueEncoder;
-  lastSwNTimesPressed = swNTimesPressed;
-  portEXIT_CRITICAL_ISR(&gpioMux);
-  //end critical
+  //portENTER_CRITICAL_ISR(&gpioMux);
+  if (xSemaphoreTake(xSemaphore, 10) == pdTRUE) { //!!
+    // int rotDifference = rotValueEncoder - lastRotValueEncoder;
+    // int swdifference = swNTimesPressed - lastSwNTimesPressed;
+    bool longPress = (switchPressed && millisLastSwPress + 1000 < millis());
+    // lastRotValueEncoder = rotValueEncoder;
+    // lastSwNTimesPressed = swNTimesPressed;
 
-  for (int i = 0; i < abs((int) rotDifference / 2); i++) {
-    navigate((rotDifference > 0) ? CLK : ACLK);
-  }
+    //portEXIT_CRITICAL_ISR(&gpioMux);
+    xSemaphoreGive(xSemaphore);
+    if (xQueueReceive(msg_queue, (void *)&cBuff, 0) == pdTRUE) { //todo loop
+      navigate(cBuff);
+    } else if (longPress) {
+      navigate(LONG_CLICK);
+    }
+    
 
-  for (int i = 0; i < swdifference; i++) {
-    navigate(CLICK);
-  }
 
-  if (longPress) {
-    navigate(LONG_CLICK);
+    //end critical
+
+    // for (int i = 0; i < abs((int) rotDifference / 2); i++) {
+    //   navigate((rotDifference > 0) ? CLK : ACLK);
+    // }
+
+    // for (int i = 0; i < swdifference; i++) {
+    //   navigate(CLICK);
+    // }
+
   }
 }
 
 
-void IRAM_ATTR isrSWAll() {
+void IRAM_ATTR isrSW() {
   long int encoderMillis =  millis();
-  portENTER_CRITICAL_ISR(&gpioMux);
-  if (millisLastEncoderChange + 20 <  encoderMillis && digitalRead(ROTARY_PINSW) == switchPressed) { // lo stato è cambiato e è passato abbastanza tempo
-    if (switchPressed) {
-      switchPressed = false;
-      if (millisLastSwPress + 1000 > encoderMillis) { //ignore long press
-        swNTimesPressed++;
-      }
-    } else {
-      switchPressed = true;
-      millisLastSwPress = encoderMillis;
-    }
-    millisLastEncoderChange = encoderMillis;
-  }
-  portEXIT_CRITICAL_ISR(&gpioMux);
+  BaseType_t task_woken = pdFALSE;
+  //portENTER_CRITICAL_ISR(&gpioMux);
+  if (xSemaphoreTakeFromISR(xSemaphore, &task_woken) == pdTRUE) { //!!
+    if (millisLastEncoderChange + 20 <  encoderMillis && digitalRead(ROTARY_PINSW) == switchPressed) { // lo stato è cambiato e è passato abbastanza tempo
+      if (switchPressed) {
+        switchPressed = false;
+        if (millisLastSwPress + 1000 > encoderMillis) { //ignore long press
+          swNTimesPressed++;
 
+          cBuff = CLICK;
+          xQueueSend(msg_queue, (void *)&cBuff, 10);
+
+        }
+      } else {
+        switchPressed = true;
+        millisLastSwPress = encoderMillis;
+      }
+      millisLastEncoderChange = encoderMillis;
+    }
+    xSemaphoreGiveFromISR(xSemaphore, &task_woken); //!!
+    //portEXIT_CRITICAL_ISR(&gpioMux);
+  }
 }
 
 void IRAM_ATTR isrAB() {
+  BaseType_t task_woken = pdFALSE;
   uint8_t s = stateEncoder & 3;
 
-  portENTER_CRITICAL_ISR(&gpioMux);
-  if (digitalRead(ROTARY_PINA)) s |= 4;
-  if (digitalRead(ROTARY_PINB)) s |= 8;
-  switch (s) {
-    case 0: case 5: case 10: case 15:
-      break;
-    case 1: case 7: case 8: case 14:
-      rotValueEncoder++; break;
-    case 2: case 4: case 11: case 13:
-      rotValueEncoder--; break;
-    case 3: case 12:
-      rotValueEncoder += 2; break;
-    default:
-      rotValueEncoder -= 2; break;
+  //portENTER_CRITICAL_ISR(&gpioMux);
+  if (xSemaphoreTakeFromISR(xSemaphore, &task_woken) == pdTRUE) {
+    if (digitalRead(ROTARY_PINA)) s |= 4;
+    if (digitalRead(ROTARY_PINB)) s |= 8;
+    switch (s) {
+      case 0: case 5: case 10: case 15:
+        break;
+      case 1: case 7: case 8: case 14:
+        rotValueEncoder++; break;
+      case 2: case 4: case 11: case 13:
+        rotValueEncoder--; break;
+      case 3: case 12:
+        {rotValueEncoder += 2;} break;
+      default:
+        {rotValueEncoder -= 2;} break; 
+    }
+    stateEncoder = (s >> 2);
+    if(rotValueEncoder - lastRotValueEncoder >= 2){
+      cBuff = CLK;
+      xQueueSend(msg_queue, (void *)&cBuff, 10);
+      lastRotValueEncoder = rotValueEncoder;
+    }else if(rotValueEncoder - lastRotValueEncoder <= -2){
+      cBuff = ACLK;
+      xQueueSend(msg_queue, (void *)&cBuff, 10);
+      lastRotValueEncoder = rotValueEncoder;
+    }
+    
+    xSemaphoreGiveFromISR(xSemaphore, &task_woken); //!!
+    //portEXIT_CRITICAL_ISR(&gpioMux);
   }
-  stateEncoder = (s >> 2);
-  portEXIT_CRITICAL_ISR(&gpioMux);
-
 }
 
 void navigate(Controll cont) {
@@ -134,10 +174,10 @@ void navigate(Controll cont) {
         if (setting == TEMPERATURE) {
           switch (cont) {
             case CLK: {
-                tmp_off += 0.5;
+                tmp_off++;
               } break;
             case ACLK: {
-                tmp_off -= 0.5;
+                tmp_off--;
               } break;
             case CLICK: {
                 page = INFO;

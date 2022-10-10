@@ -53,13 +53,13 @@ void DrawSetting() {
   switch (setting) {
     case TEMPERATURE: {
         display.print(F("Temp"));
-        display.setCursor(4, S_H - 5);
-        display.print(tmp_off);
-        display.print(F("°C"));
+        display.setCursor(4, S_H - 8);
+        display.print((int) tmp_off);
+        display.print(F(" c"));
       } break;
     case PROGRAMM: {
         display.print(F("Programma"));
-        display.setCursor(4, S_H - 5);
+        display.setCursor(4, S_H - 8);
         switch (programm) {
           case STANDBY: {
               display.print(F("Standby"));
@@ -77,7 +77,7 @@ void DrawSetting() {
       } break;
     case MAX_POW: {
         display.print(F("Lim Pot"));
-        display.setCursor(4, S_H - 5);
+        display.setCursor(4, S_H - 8);
         switch (pow_max) {
           case OFF: {
               display.print(F("0 KW"));
@@ -95,12 +95,12 @@ void DrawSetting() {
       } break;
     case WIFI: {
         display.print(F("WiFi"));
-        display.setCursor(4, S_H - 5);
+        display.setCursor(4, S_H - 8);
         display.print((wifi_on) ? F("ON") : F("OFF"));
       } break;
     case WEB_SERVER: {
         display.print(F("Web Server"));
-        display.setCursor(4, S_H - 5);
+        display.setCursor(4, S_H - 8);
         display.print((web_server_on) ? F("ON") : F("OFF"));
       } break;
     case ERRORS: {
@@ -109,7 +109,8 @@ void DrawSetting() {
   }
 
   if (editSetting) {
-    display.print(F(" #"));
+    display.setCursor(S_W - 25, S_H - 8);
+    display.print(F("#"));
   }
 
   display.display(); // Show the display buffer on the screen
@@ -166,7 +167,7 @@ void DrawInfo() {
   //display.setCursor(90,S_H-5);
   display.print(".");
   display.print(tmp_decimal);
-  display.print(F("°C"));
+  display.print(F(" c"));
 
 
   display.display(); // Show the display buffer on the screen

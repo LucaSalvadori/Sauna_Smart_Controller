@@ -2,8 +2,6 @@
 #define _HEATER_
 #include "shared.h"
 
-
-
 #define ONE_WIRE_BUS 15
 #define RELAY_1 4
 #define RELAY_2 0
