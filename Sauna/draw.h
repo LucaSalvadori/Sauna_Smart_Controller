@@ -20,6 +20,10 @@
 #define SCREEN_ADDRESS 0x3C //0x3D ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(S_W, S_H, &Wire, OLED_RESET);
 
+void draw();
+void DrawInfo();
+void DrawSetting();
+
 bool initDispaly() {
   return display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 }

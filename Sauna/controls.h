@@ -10,6 +10,8 @@
 #define ROTARY_PINB 18
 #define ROTARY_PINSW 5
 
+
+
 portMUX_TYPE gpioMux = portMUX_INITIALIZER_UNLOCKED;
 
 
@@ -22,6 +24,12 @@ uint8_t stateEncoder = 0;
 bool switchPressed = 0;
 int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
 
+void initControls();
+void navigate(Controll cont);
+void IRAM_ATTR isr_rotary_encoder();
+void IRAM_ATTR isrAB();
+void IRAM_ATTR isrSWAll();
+void input_read();
 
 void initControls() {
   pinMode(ROTARY_PINA, INPUT_PULLUP);
