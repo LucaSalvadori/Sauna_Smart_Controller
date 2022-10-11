@@ -40,7 +40,9 @@ void heaterControll() {
   //  }
 
   //controll
-  if (power == OFF) {
+  if(programm == STANDBY){
+    power = OFF;
+  }else if (power == OFF) {
     if (tmp_int < tmp_off - TEMP_DELTA) {
       power = pow_max;
     }

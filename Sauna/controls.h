@@ -53,9 +53,11 @@ void initControls() {
   xSemaphoreGive(ISR_Semaphore);
 }
 
-void input_read() {
+bool input_read() {
+  bool update = false;
   while(xQueueReceive(input_queue, (void *)&cBuff, 0) == pdTRUE) { //empty queue
     navigate(cBuff);
+    update = true;
   }
   long int millisTimeout = millis() - timeoutTime;
   if (xSemaphoreTake(ISR_Semaphore, 10) == pdTRUE) {
@@ -64,11 +66,14 @@ void input_read() {
     xSemaphoreGive(ISR_Semaphore);
     if (longPress) {
       navigate(LONG_CLICK);
+      update = true;
     }
     if (timeout) {
       navigate(TIME_OUT);
+      update = true;
     }
   }
+  return update;
 }
 
 
