@@ -10,6 +10,10 @@
 #define ROTARY_PINB 18
 #define ROTARY_PINSW 5
 
+#define SHORT_TIMEOUT 3000
+#define NORMAL_TIMEOUT 10000
+#define LONG_TIMEOUT 30000
+
 
 static const int msg_queue_len = 10;     // Size of msg_queue
 static QueueHandle_t msg_queue;
@@ -26,6 +30,7 @@ volatile uint8_t stateEncoder = 0;
 volatile bool switchPressed = 0;
 volatile int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
 Controll cBuff;
+long int timeoutTime =  NORMAL_TIMEOUT;
 
 void initControls();
 void navigate(Controll cont);
@@ -52,11 +57,16 @@ void input_read() {
   while(xQueueReceive(msg_queue, (void *)&cBuff, 0) == pdTRUE) { //empty queue
     navigate(cBuff);
   }
-  if (xSemaphoreTake(xSemaphore, 10) == pdTRUE) { 
+  long int millisTimeout = millis() - timeoutTime;
+  if (xSemaphoreTake(xSemaphore, 10) == pdTRUE) {
+    bool timeout = (millisLastEncoderChange  <  millisTimeout || millisLastSwPress  <  millisTimeout); // no input for some time
     bool longPress = (switchPressed && millisLastSwPress + 1000 < millis());
     xSemaphoreGive(xSemaphore);
     if (longPress) {
       navigate(LONG_CLICK);
+    }
+    if (timeout) {
+      navigate(TIME_OUT);
     }
   }
 }
@@ -130,11 +140,13 @@ void navigate(Controll cont) {
               page = SETTING;
               setting = PROGRAMM;
               editSetting = false;
+              timeoutTime =  NORMAL_TIMEOUT;
             } break;
           case CLK:
           case ACLK: {
               page = SETTING;
               setting = TEMPERATURE;
+              timeoutTime =  SHORT_TIMEOUT;
             } break;
           case LONG_CLICK: {programm = STANDBY;} break; //!!OFF
           case TIME_OUT: {} break;
@@ -142,6 +154,7 @@ void navigate(Controll cont) {
       } break;
     case SETTING: {
         if (cont == TIME_OUT || cont == LONG_CLICK) {
+          timeoutTime =  NORMAL_TIMEOUT;
           page = INFO;
           return;
         }
@@ -155,6 +168,7 @@ void navigate(Controll cont) {
               } break;
             case CLICK: {
                 page = INFO;
+                timeoutTime =  NORMAL_TIMEOUT;
               } break;
           }
           return;
