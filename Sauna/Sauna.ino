@@ -26,8 +26,13 @@ void heaterControll();
 void setup() {
 
 
+
   Serial.begin(115200);
   Serial.println(F("Hello"));
+
+  shared_Semaphore = xSemaphoreCreateBinary();
+  xSemaphoreGive(shared_Semaphore);
+
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
 
   initControls();
@@ -49,20 +54,19 @@ void setup() {
 }
 
 void loop() {
-  int i = 0;
-
-  while (true) {
+  for (int i = 0; true; i++) {
     if (i % 30 == 0) {
       Serial.print("SW ");
       Serial.print(swNTimesPressed);
       Serial.print(" Encoder ");
       Serial.println(rotValueEncoder);
     }
+    
+    if (input_read() || i % 20 == 0) {
+      draw();
+      heaterControll();
+    }
 
-
-    input_read();
-    draw();
-    heaterControll();
     vTaskDelay(100/portTICK_PERIOD_MS);
   }
 }

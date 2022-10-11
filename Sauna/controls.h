@@ -15,10 +15,10 @@
 #define LONG_TIMEOUT 30000
 
 
-static const int msg_queue_len = 10;     // Size of msg_queue
-static QueueHandle_t msg_queue;
+static const int input_queue_len = 10;     // Size of input_queue
+static QueueHandle_t input_queue;
 
-SemaphoreHandle_t xSemaphore;
+SemaphoreHandle_t ISR_Semaphore;
 
 
 enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
@@ -48,20 +48,20 @@ void initControls() {
   attachInterrupt(ROTARY_PINB, isrAB, CHANGE);
   attachInterrupt(ROTARY_PINSW, isrSW, CHANGE);
 
-  msg_queue = xQueueCreate(msg_queue_len, sizeof(Controll));
-  xSemaphore = xSemaphoreCreateBinary();
-  xSemaphoreGive(xSemaphore);
+  input_queue = xQueueCreate(input_queue_len, sizeof(Controll));
+  ISR_Semaphore = xSemaphoreCreateBinary();
+  xSemaphoreGive(ISR_Semaphore);
 }
 
 void input_read() {
-  while(xQueueReceive(msg_queue, (void *)&cBuff, 0) == pdTRUE) { //empty queue
+  while(xQueueReceive(input_queue, (void *)&cBuff, 0) == pdTRUE) { //empty queue
     navigate(cBuff);
   }
   long int millisTimeout = millis() - timeoutTime;
-  if (xSemaphoreTake(xSemaphore, 10) == pdTRUE) {
+  if (xSemaphoreTake(ISR_Semaphore, 10) == pdTRUE) {
     bool timeout = (millisLastEncoderChange  <  millisTimeout || millisLastSwPress  <  millisTimeout); // no input for some time
     bool longPress = (switchPressed && millisLastSwPress + 1000 < millis());
-    xSemaphoreGive(xSemaphore);
+    xSemaphoreGive(ISR_Semaphore);
     if (longPress) {
       navigate(LONG_CLICK);
     }
@@ -75,15 +75,15 @@ void input_read() {
 void IRAM_ATTR isrSW() {
   long int encoderMillis =  millis();
   BaseType_t task_woken = pdFALSE;
-  if (xSemaphoreTakeFromISR(xSemaphore, &task_woken) == pdTRUE) { //!!
+  if (xSemaphoreTakeFromISR(ISR_Semaphore, &task_woken) == pdTRUE) { //!!
     if (millisLastEncoderChange + 20 <  encoderMillis && digitalRead(ROTARY_PINSW) == switchPressed) { // lo stato è cambiato e è passato abbastanza tempo
       if (switchPressed) {
         switchPressed = false;
         if (millisLastSwPress + 1000 > encoderMillis) { //ignore long press
           swNTimesPressed++;
-          if(xQueueIsQueueFullFromISR( msg_queue ) == pdFALSE){
+          if(xQueueIsQueueFullFromISR( input_queue ) == pdFALSE){
             cBuff = CLICK;
-            xQueueSendToBackFromISR(msg_queue, (void *)&cBuff, &task_woken);
+            xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
           }
         }
       } else {
@@ -92,13 +92,13 @@ void IRAM_ATTR isrSW() {
       }
       millisLastEncoderChange = encoderMillis;
     }
-    xSemaphoreGiveFromISR(xSemaphore, &task_woken); //!!  }
+    xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!  }
 }
 
 void IRAM_ATTR isrAB() {
   BaseType_t task_woken = pdFALSE;
   uint8_t s = stateEncoder & 3;
-  if (xSemaphoreTakeFromISR(xSemaphore, &task_woken) == pdTRUE) {
+  if (xSemaphoreTakeFromISR(ISR_Semaphore, &task_woken) == pdTRUE) {
     if (digitalRead(ROTARY_PINA)) s |= 4;
     if (digitalRead(ROTARY_PINB)) s |= 8;
     switch (s) {
@@ -115,24 +115,25 @@ void IRAM_ATTR isrAB() {
     }
     stateEncoder = (s >> 2);
     if(rotValueEncoder - lastRotValueEncoder >= 2){
-      if(xQueueIsQueueFullFromISR( msg_queue ) == pdFALSE){
+      if(xQueueIsQueueFullFromISR( input_queue ) == pdFALSE){
         cBuff = CLK;
-        xQueueSendToBackFromISR(msg_queue, (void *)&cBuff, &task_woken);
+        xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
       }
       lastRotValueEncoder = rotValueEncoder; //??
     }else if(rotValueEncoder - lastRotValueEncoder <= -2){
-      if(xQueueIsQueueFullFromISR( msg_queue) == pdFALSE){
+      if(xQueueIsQueueFullFromISR( input_queue) == pdFALSE){
         cBuff = ACLK;
-        xQueueSendToBackFromISR(msg_queue, (void *)&cBuff, &task_woken);
+        xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
       }
       lastRotValueEncoder = rotValueEncoder; //??
     }
     
-    xSemaphoreGiveFromISR(xSemaphore, &task_woken); //!!
+    xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!
   }
 }
 
 void navigate(Controll cont) {
+  while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
   switch (page) {
     case INFO: {
         switch (cont) {
@@ -335,6 +336,7 @@ void navigate(Controll cont) {
         // da implm
       } break;
   }
+  xSemaphoreGive(shared_Semaphore);
 }
 
 #endif;
