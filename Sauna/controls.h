@@ -11,11 +11,7 @@
 #define ROTARY_PINSW 5
 
 
-
-//portMUX_TYPE gpioMux = portMUX_INITIALIZER_UNLOCKED;
-
-
-static const int msg_queue_len = 100;     // Size of msg_queue
+static const int msg_queue_len = 10;     // Size of msg_queue
 static QueueHandle_t msg_queue;
 
 SemaphoreHandle_t xSemaphore;
@@ -52,36 +48,16 @@ void initControls() {
   xSemaphoreGive(xSemaphore);
 }
 
-void input_read() { //to redo
-  //critical
-  //portENTER_CRITICAL_ISR(&gpioMux);
-  if (xSemaphoreTake(xSemaphore, 10) == pdTRUE) { //!!
-    // int rotDifference = rotValueEncoder - lastRotValueEncoder;
-    // int swdifference = swNTimesPressed - lastSwNTimesPressed;
+void input_read() {
+  while(xQueueReceive(msg_queue, (void *)&cBuff, 0) == pdTRUE) { //empty queue
+    navigate(cBuff);
+  }
+  if (xSemaphoreTake(xSemaphore, 10) == pdTRUE) { 
     bool longPress = (switchPressed && millisLastSwPress + 1000 < millis());
-    // lastRotValueEncoder = rotValueEncoder;
-    // lastSwNTimesPressed = swNTimesPressed;
-
-    //portEXIT_CRITICAL_ISR(&gpioMux);
     xSemaphoreGive(xSemaphore);
-    if (xQueueReceive(msg_queue, (void *)&cBuff, 0) == pdTRUE) { //todo loop
-      navigate(cBuff);
-    } else if (longPress) {
+    if (longPress) {
       navigate(LONG_CLICK);
     }
-    
-
-
-    //end critical
-
-    // for (int i = 0; i < abs((int) rotDifference / 2); i++) {
-    //   navigate((rotDifference > 0) ? CLK : ACLK);
-    // }
-
-    // for (int i = 0; i < swdifference; i++) {
-    //   navigate(CLICK);
-    // }
-
   }
 }
 
@@ -89,17 +65,16 @@ void input_read() { //to redo
 void IRAM_ATTR isrSW() {
   long int encoderMillis =  millis();
   BaseType_t task_woken = pdFALSE;
-  //portENTER_CRITICAL_ISR(&gpioMux);
   if (xSemaphoreTakeFromISR(xSemaphore, &task_woken) == pdTRUE) { //!!
     if (millisLastEncoderChange + 20 <  encoderMillis && digitalRead(ROTARY_PINSW) == switchPressed) { // lo stato è cambiato e è passato abbastanza tempo
       if (switchPressed) {
         switchPressed = false;
         if (millisLastSwPress + 1000 > encoderMillis) { //ignore long press
           swNTimesPressed++;
-
-          cBuff = CLICK;
-          xQueueSend(msg_queue, (void *)&cBuff, 10);
-
+          if(xQueueIsQueueFullFromISR( msg_queue ) == pdFALSE){
+            cBuff = CLICK;
+            xQueueSendToBackFromISR(msg_queue, (void *)&cBuff, &task_woken);
+          }
         }
       } else {
         switchPressed = true;
@@ -107,16 +82,12 @@ void IRAM_ATTR isrSW() {
       }
       millisLastEncoderChange = encoderMillis;
     }
-    xSemaphoreGiveFromISR(xSemaphore, &task_woken); //!!
-    //portEXIT_CRITICAL_ISR(&gpioMux);
-  }
+    xSemaphoreGiveFromISR(xSemaphore, &task_woken); //!!  }
 }
 
 void IRAM_ATTR isrAB() {
   BaseType_t task_woken = pdFALSE;
   uint8_t s = stateEncoder & 3;
-
-  //portENTER_CRITICAL_ISR(&gpioMux);
   if (xSemaphoreTakeFromISR(xSemaphore, &task_woken) == pdTRUE) {
     if (digitalRead(ROTARY_PINA)) s |= 4;
     if (digitalRead(ROTARY_PINB)) s |= 8;
@@ -134,17 +105,20 @@ void IRAM_ATTR isrAB() {
     }
     stateEncoder = (s >> 2);
     if(rotValueEncoder - lastRotValueEncoder >= 2){
-      cBuff = CLK;
-      xQueueSend(msg_queue, (void *)&cBuff, 10);
-      lastRotValueEncoder = rotValueEncoder;
+      if(xQueueIsQueueFullFromISR( msg_queue ) == pdFALSE){
+        cBuff = CLK;
+        xQueueSendToBackFromISR(msg_queue, (void *)&cBuff, &task_woken);
+      }
+      lastRotValueEncoder = rotValueEncoder; //??
     }else if(rotValueEncoder - lastRotValueEncoder <= -2){
-      cBuff = ACLK;
-      xQueueSend(msg_queue, (void *)&cBuff, 10);
-      lastRotValueEncoder = rotValueEncoder;
+      if(xQueueIsQueueFullFromISR( msg_queue) == pdFALSE){
+        cBuff = ACLK;
+        xQueueSendToBackFromISR(msg_queue, (void *)&cBuff, &task_woken);
+      }
+      lastRotValueEncoder = rotValueEncoder; //??
     }
     
     xSemaphoreGiveFromISR(xSemaphore, &task_woken); //!!
-    //portEXIT_CRITICAL_ISR(&gpioMux);
   }
 }
 
@@ -162,7 +136,7 @@ void navigate(Controll cont) {
               page = SETTING;
               setting = TEMPERATURE;
             } break;
-          case LONG_CLICK: {} break; //!!OFF
+          case LONG_CLICK: {programm = STANDBY;} break; //!!OFF
           case TIME_OUT: {} break;
         }
       } break;
@@ -298,7 +272,6 @@ void navigate(Controll cont) {
                       wifi_on = false;
                     }  break;
                 }
-                //wifi_on = !wifi_on;
               } else {
                 switch (cont) {
                   case CLK: {
@@ -320,7 +293,6 @@ void navigate(Controll cont) {
                       web_server_on = false;
                     }  break;
                 }
-                // web_server_on = !web_server_on;
               } else {
                 switch (cont) {
                   case CLK: {

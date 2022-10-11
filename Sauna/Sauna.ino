@@ -63,7 +63,6 @@ void loop() {
     input_read();
     draw();
     heaterControll();
-    //delay(100); // Pause for 2 seconds
     vTaskDelay(100/portTICK_PERIOD_MS);
   }
 }
