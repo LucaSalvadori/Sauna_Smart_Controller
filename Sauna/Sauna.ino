@@ -18,7 +18,7 @@ void navigate(Controll cont);
 void IRAM_ATTR isr_rotary_encoder();
 void IRAM_ATTR isrAB();
 void IRAM_ATTR isrSW();
-void input_read();
+bool input_read();
 
 bool initHeater();
 void heaterControll();

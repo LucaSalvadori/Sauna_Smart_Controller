@@ -12,7 +12,7 @@ void initControls() {
   input_queue = xQueueCreate(input_queue_len, sizeof(Controll));
   ISR_Semaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(ISR_Semaphore);
-}
+};
 
 bool input_read() {
   bool update = false;
@@ -35,7 +35,7 @@ bool input_read() {
     }
   }
   return update;
-}
+};
 
 
 void IRAM_ATTR isrSW() {
@@ -59,7 +59,7 @@ void IRAM_ATTR isrSW() {
       millisLastEncoderChange = encoderMillis;
     }
     xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!  }
-}
+};
 
 void IRAM_ATTR isrAB() {
   BaseType_t task_woken = pdFALSE;
@@ -96,7 +96,7 @@ void IRAM_ATTR isrAB() {
     
     xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!
   }
-}
+};
 
 void navigate(Controll cont) {
   while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
@@ -303,4 +303,4 @@ void navigate(Controll cont) {
       } break;
   }
   xSemaphoreGive(shared_Semaphore);
-}
+};
