@@ -1,7 +1,7 @@
 #ifndef _CONTROLS_
 #define _CONTROLS_
 
-#include "shared.h"
+#include "shared.hpp"
 #include <Arduino.h> //!!
 
 
@@ -18,25 +18,25 @@
 static const int input_queue_len = 10;     // Size of input_queue
 static QueueHandle_t input_queue;
 
-SemaphoreHandle_t ISR_Semaphore;
-
+static SemaphoreHandle_t ISR_Semaphore;
 
 enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
 
 //encoder and switch
-volatile long int millisLastEncoderChange =  0;
-volatile long int millisLastSwPress =  0;
-volatile uint8_t stateEncoder = 0;
-volatile bool switchPressed = 0;
-volatile int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
-Controll cBuff;
-long int timeoutTime =  NORMAL_TIMEOUT;
+static volatile long int millisLastEncoderChange =  0;
+static volatile long int millisLastSwPress =  0;
+static volatile uint8_t stateEncoder = 0;
+static volatile bool switchPressed = 0;
+static volatile int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
+static Controll cBuff;
+static long int timeoutTime =  NORMAL_TIMEOUT;
+static long int millisTimeoutTime =  0;
 
+bool input_read();
 void initControls();
 void navigate(Controll cont);
 void IRAM_ATTR isr_rotary_encoder();
 void IRAM_ATTR isrAB();
 void IRAM_ATTR isrSW();
-void input_read();
-
+void resetTimeout();
 #endif;

@@ -1,6 +1,7 @@
-#include "draw.h"
+#include "draw.hpp"
 
 bool initDispaly() {
+  //Serial.println(&page);
   return display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 }
 
@@ -10,6 +11,7 @@ void draw() {
         DrawInfo();
       } break;
     case SETTING: {
+      
         DrawSetting();
       } break;
     case ERROR_PAGE: {

@@ -1,6 +1,7 @@
-#include "controls.h"
+#include "controls.hpp"
 
 void initControls() {
+  //Serial.println(&page);
   pinMode(ROTARY_PINA, INPUT_PULLUP);
   pinMode(ROTARY_PINB, INPUT_PULLUP);
   pinMode(ROTARY_PINSW, INPUT_PULLUP);
@@ -15,26 +16,33 @@ void initControls() {
 }
 
 bool input_read() {
-  bool update = false;
-  while(xQueueReceive(input_queue, (void *)&cBuff, 0) == pdTRUE) { //empty queue
+  bool S_update = false;
+  while (xQueueReceive(input_queue, (void *)&cBuff, 0) == pdTRUE) { //empty queue
     navigate(cBuff);
-    update = true;
+    resetTimeout();
+    S_update = true;
   }
-  long int millisTimeout = millis() - timeoutTime;
+  long int millisTime = millis();
   if (xSemaphoreTake(ISR_Semaphore, 10) == pdTRUE) {
-    bool timeout = (millisLastEncoderChange  <  millisTimeout || millisLastSwPress  <  millisTimeout); // no input for some time
-    bool longPress = (switchPressed && millisLastSwPress + 1000 < millis());
+    bool timeout = (millisTimeoutTime < millisTime && !switchPressed); 
+    bool longPress = (switchPressed && millisLastSwPress + 1000 < millisTime);
     xSemaphoreGive(ISR_Semaphore);
     if (longPress) {
       navigate(LONG_CLICK);
-      update = true;
+      resetTimeout();
+      S_update = true;
     }
     if (timeout) {
       navigate(TIME_OUT);
-      update = true;
+      resetTimeout();
+      S_update = true;
     }
   }
-  return update;
+  return S_update;
+}
+
+void resetTimeout(){
+  millisTimeoutTime = millis() + timeoutTime;
 }
 
 
@@ -47,7 +55,7 @@ void IRAM_ATTR isrSW() {
         switchPressed = false;
         if (millisLastSwPress + 1000 > encoderMillis) { //ignore long press
           swNTimesPressed++;
-          if(xQueueIsQueueFullFromISR( input_queue ) == pdFALSE){
+          if (xQueueIsQueueFullFromISR( input_queue ) == pdFALSE) {
             cBuff = CLICK;
             xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
           }
@@ -58,7 +66,8 @@ void IRAM_ATTR isrSW() {
       }
       millisLastEncoderChange = encoderMillis;
     }
-    xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!  }
+    xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!
+  }
 }
 
 void IRAM_ATTR isrAB() {
@@ -75,31 +84,35 @@ void IRAM_ATTR isrAB() {
       case 2: case 4: case 11: case 13:
         rotValueEncoder--; break;
       case 3: case 12:
-        {rotValueEncoder += 2;} break;
+        {
+          rotValueEncoder += 2;
+        } break;
       default:
-        {rotValueEncoder -= 2;} break; 
+        {
+          rotValueEncoder -= 2;
+        } break;
     }
     stateEncoder = (s >> 2);
-    if(rotValueEncoder - lastRotValueEncoder >= 2){
-      if(xQueueIsQueueFullFromISR( input_queue ) == pdFALSE){
+    if (rotValueEncoder - lastRotValueEncoder >= 2) {
+      if (xQueueIsQueueFullFromISR( input_queue ) == pdFALSE) {
         cBuff = CLK;
         xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
       }
       lastRotValueEncoder = rotValueEncoder; //??
-    }else if(rotValueEncoder - lastRotValueEncoder <= -2){
-      if(xQueueIsQueueFullFromISR( input_queue) == pdFALSE){
+    } else if (rotValueEncoder - lastRotValueEncoder <= -2) {
+      if (xQueueIsQueueFullFromISR( input_queue) == pdFALSE) {
         cBuff = ACLK;
         xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
       }
       lastRotValueEncoder = rotValueEncoder; //??
     }
-    
+
     xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!
   }
 }
 
 void navigate(Controll cont) {
-  while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
+  //while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
   switch (page) {
     case INFO: {
         switch (cont) {
@@ -115,7 +128,9 @@ void navigate(Controll cont) {
               setting = TEMPERATURE;
               timeoutTime =  SHORT_TIMEOUT;
             } break;
-          case LONG_CLICK: {programm = STANDBY;} break; //!!OFF
+          case LONG_CLICK: {
+              programm = STANDBY;
+            } break; //!!OFF
           case TIME_OUT: {} break;
         }
       } break;
@@ -302,5 +317,5 @@ void navigate(Controll cont) {
         // da implm
       } break;
   }
-  xSemaphoreGive(shared_Semaphore);
+ // xSemaphoreGive(shared_Semaphore);
 }
