@@ -13,7 +13,7 @@ void initControls() {
   input_queue = xQueueCreate(input_queue_len, sizeof(Controll));
   ISR_Semaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(ISR_Semaphore);
-}
+};
 
 bool input_read() {
   bool S_update = false;
@@ -44,6 +44,7 @@ bool input_read() {
 void resetTimeout(){
   millisTimeoutTime = millis() + timeoutTime;
 }
+
 
 
 void IRAM_ATTR isrSW() {
@@ -109,7 +110,7 @@ void IRAM_ATTR isrAB() {
 
     xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!
   }
-}
+};
 
 void navigate(Controll cont) {
   //while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
