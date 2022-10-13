@@ -4,7 +4,7 @@
 #include <Arduino.h> //!!
 
 
- extern SemaphoreHandle_t shared_Semaphore;
+extern SemaphoreHandle_t shared_Semaphore;
 
 #define TEMP_DELTA 1.5 // temperature difference for heater activation
 extern float tmp_int; //-!- d h

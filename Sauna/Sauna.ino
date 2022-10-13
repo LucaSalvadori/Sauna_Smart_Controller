@@ -6,6 +6,8 @@
 #include <SPI.h>
 #include <Wire.h>
 
+
+//--GLOBALS--
  SemaphoreHandle_t shared_Semaphore;
  float tmp_int = 80.5; //-!- d h
  float tmp_off = 70;   //-!- c d h
@@ -30,29 +32,11 @@
  bool wifi_on = false; //-!- c d
  bool web_server_on = false; //-!- c d
 
-
-
 //--Functions--
-//void TaskDisplay( void *pvParameters );
-//bool initDispaly();
-//void draw();
-//void DrawInfo();
-//void DrawSetting();
-//
-//void initControls();
-//void navigate(Controll cont);
-//void IRAM_ATTR isr_rotary_encoder();
-//void IRAM_ATTR isrAB();
-//void IRAM_ATTR isrSW();
-//bool input_read();
-//
-//bool initHeater();
-//void heaterControll();
+
 
 void setup() {
-
-
-
+  
   Serial.begin(115200);
   Serial.println(F("Hello"));
 

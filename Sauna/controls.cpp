@@ -1,7 +1,6 @@
 #include "controls.hpp"
 
 void initControls() {
-  //Serial.println(&page);
   pinMode(ROTARY_PINA, INPUT_PULLUP);
   pinMode(ROTARY_PINB, INPUT_PULLUP);
   pinMode(ROTARY_PINSW, INPUT_PULLUP);
@@ -101,7 +100,7 @@ void IRAM_ATTR isrAB() {
       }
       lastRotValueEncoder = rotValueEncoder; //??
     } else if (rotValueEncoder - lastRotValueEncoder <= -2) {
-      if (xQueueIsQueueFullFromISR( input_queue) == pdFALSE) {
+      if (xQueueIsQueueFullFromISR( input_queue) == pdFALSE ) {
         cBuff = ACLK;
         xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
       }
@@ -110,7 +109,7 @@ void IRAM_ATTR isrAB() {
 
     xSemaphoreGiveFromISR(ISR_Semaphore, &task_woken); //!!
   }
-};
+}
 
 void navigate(Controll cont) {
   //while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
