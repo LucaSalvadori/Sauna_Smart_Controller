@@ -6,9 +6,9 @@
 
 
 //pins
-#define ROTARY_PINA 19
-#define ROTARY_PINB 18
-#define ROTARY_PINSW 5
+#define ROTARY_PINA 36
+#define ROTARY_PINB 39
+#define ROTARY_PINSW 34
 
 #define SHORT_TIMEOUT 3000
 #define NORMAL_TIMEOUT 10000

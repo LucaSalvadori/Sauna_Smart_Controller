@@ -3,6 +3,7 @@
 
 #include "shared.hpp"
 
+#include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
@@ -18,7 +19,9 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C //0x3D ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
-static Adafruit_SSD1306 display(S_W, S_H, &Wire, OLED_RESET);
+
+static TwoWire I2C_1 = TwoWire(0);
+static Adafruit_SSD1306 display;
 
 bool initDispaly();
 void draw();

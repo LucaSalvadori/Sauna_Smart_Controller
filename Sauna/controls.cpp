@@ -129,7 +129,7 @@ void navigate(Controll cont) {
               timeoutTime =  SHORT_TIMEOUT;
             } break;
           case LONG_CLICK: {
-              programm = STANDBY;
+             // programm = STANDBY;
             } break; //!!OFF
           case TIME_OUT: {} break;
         }

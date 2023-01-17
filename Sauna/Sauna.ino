@@ -37,7 +37,7 @@
 
 void setup() {
   
-  Serial.begin(115200);
+  Serial.begin(2000000);
   Serial.println(F("Hello"));
 
   shared_Semaphore = xSemaphoreCreateBinary();

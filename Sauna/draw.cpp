@@ -1,7 +1,10 @@
 #include "draw.hpp"
 
 bool initDispaly() {
-  //Serial.println(&page);
+  
+  I2C_1.begin(21, 22);
+  display = Adafruit_SSD1306(S_W, S_H, &I2C_1, OLED_RESET);
+  
   return display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 }
 

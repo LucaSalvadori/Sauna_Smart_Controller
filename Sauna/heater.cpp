@@ -1,7 +1,21 @@
 #include "heater.hpp"
 
 bool initHeater() {
+
+  pinMode(RELAY_1, OUTPUT);
+  pinMode(RELAY_2, OUTPUT);
+  pinMode(RELAY_3, OUTPUT);
+
+
+  
   sensors.begin();
+  I2C_2.begin(4, 17);
+  sht31 = Adafruit_SHT31(&I2C_2);
+  
+  if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
+    Serial.println("Couldn't find SHT31");
+  }
+  
   return true;
 }
 
@@ -24,6 +38,24 @@ void heaterControll() {
     {
       Serial.println("Error: Could not read temperature data");
     }
+
+
+
+  float t = sht31.readTemperature();
+  float h = sht31.readHumidity();
+
+  if (! isnan(t)) {  // check if 'is not a number'
+    Serial.print("Temp *C = "); Serial.print(t); Serial.print("\t\t");
+  } else { 
+    Serial.println("Failed to read temperature");
+  }
+  
+  if (! isnan(h)) {  // check if 'is not a number'
+    Serial.print("Hum. % = "); Serial.println(h);
+  } else { 
+    Serial.println("Failed to read humidity");
+  }
+  
 
   //controll
   if(programm == STANDBY){
