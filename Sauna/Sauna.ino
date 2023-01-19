@@ -9,8 +9,9 @@
 
 //--GLOBALS--
  SemaphoreHandle_t shared_Semaphore;
- float tmp_int = 80.5; //-!- d h
+ float tmp_int = 0; //-!- d h
  float tmp_off = 70;   //-!- c d h
+ float hum = 0;
 
 // enum Pow_level {OFF, ONE, TWO, TREE};
  Pow_level power = ONE; //-!- d h
@@ -38,7 +39,7 @@
 void setup() {
   
   Serial.begin(2000000);
-  Serial.println(F("Hello"));
+  Serial.println(F("Smart Sauna : by Luca Salvadori"));
 
   shared_Semaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(shared_Semaphore);
@@ -80,6 +81,6 @@ void loop() {
       heaterControll();
     }
 
-    vTaskDelay(100/portTICK_PERIOD_MS);
+    vTaskDelay(10/portTICK_PERIOD_MS);
   }
 }

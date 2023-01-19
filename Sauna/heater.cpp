@@ -21,23 +21,22 @@ bool initHeater() {
 
 void heaterControll() {
   //read temperature (!! is very slow)
-   sensors.requestTemperatures(); // Send the command to get temperatures
-//   After we got the temperatures, we can print them here.
-//   We use the function ByIndex, and as an example get the temperature from the first sensor only.
-   float tempC = sensors.getTempCByIndex(0);
+ //  sensors.requestTemperatures(); // Send the command to get temperatures
+
+//   float tempC = sensors.getTempCByIndex(0);
 
   // Check if reading was successful
-    if(tempC != DEVICE_DISCONNECTED_C)
-    {
-//      Serial.print("Temperature for the device 1 (index 0) is: ");
-//      Serial.println(tempC);
-  
-      tmp_int = tempC;
-    }
-    else
-    {
-      Serial.println("Error: Could not read temperature data");
-    }
+//     if(tempC != DEVICE_DISCONNECTED_C)
+//     {
+// //      Serial.print("Temperature for the device 1 (index 0) is: ");
+// //      Serial.println(tempC);f
+//       Serial.print(F("Temp ext *C = ")); Serial.print(tempC); Serial.print(F("\t\t"));
+//       //tmp_int = tempC;
+//     }
+//     else
+//     {
+//       Serial.println(F("Error: Could not read ext temperature data"));
+//     }
 
 
 
@@ -45,15 +44,17 @@ void heaterControll() {
   float h = sht31.readHumidity();
 
   if (! isnan(t)) {  // check if 'is not a number'
-    Serial.print("Temp *C = "); Serial.print(t); Serial.print("\t\t");
+    tmp_int = t;
+    Serial.print(F("Temp int *C = ")); Serial.print(t); Serial.print(F("\t\t"));
   } else { 
-    Serial.println("Failed to read temperature");
+    Serial.println(F("Failed to read int temperature"));
   }
   
   if (! isnan(h)) {  // check if 'is not a number'
-    Serial.print("Hum. % = "); Serial.println(h);
+    hum = h;
+    Serial.print(F("Hum. % = ")); Serial.println(h);
   } else { 
-    Serial.println("Failed to read humidity");
+    Serial.println(F("Failed to read humidity"));
   }
   
 

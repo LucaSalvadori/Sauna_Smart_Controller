@@ -140,15 +140,28 @@ void DrawInfo() {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, S_H - 5);
-  int tmp_integer = tmp_int;
-  int tmp_decimal = (tmp_int - tmp_integer) * 10;
-  display.print(tmp_integer);
+
+  
+  bool tmp_or_hum = (millis() >> 12) % 2 == 0 ;
+  int integer;
+  int decimal;
+  if(tmp_or_hum){
+    integer = tmp_int;
+    decimal = (tmp_int - integer) * 10;
+  }else{
+    integer = hum;
+    decimal = (hum - integer) * 10;
+  }
+  
+
+  display.print(integer);
   display.setFont(&FONT_12);
   display.setTextSize(1);
   //display.setCursor(90,S_H-5);
   display.print(".");
-  display.print(tmp_decimal);
-  display.print(F(" c"));
+  display.print(decimal);
+
+  display.print(tmp_or_hum ? F(" c") : F(" %"));
 
 
   display.display(); // Show the display buffer on the screen

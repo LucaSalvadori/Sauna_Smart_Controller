@@ -9,6 +9,7 @@ extern SemaphoreHandle_t shared_Semaphore;
 #define TEMP_DELTA 1.5 // temperature difference for heater activation
 extern float tmp_int; //-!- d h
 extern float tmp_off;   //-!- c d h
+extern float hum;
 
  enum Pow_level {OFF, ONE, TWO, TREE};
 extern Pow_level power; //-!- d h

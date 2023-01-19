@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "c:/Users/Luca/Documents/Arduino/Sauna_Smart_Controller",
+      "program": "c:/Users/Luca/Documents/Arduino/Sauna_Smart_Controller/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:/Users/Luca/AppData/Local/Arduino15/packages/esp32/tools/xtensa-esp32-elf-gdb/gcc8_4_0-esp-2021r2-patch3/bin/xtensa-esp32-elf-g++",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}
