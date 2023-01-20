@@ -9,7 +9,7 @@ void initControls() {
   attachInterrupt(ROTARY_PINB, isrAB, CHANGE);
   attachInterrupt(ROTARY_PINSW, isrSW, CHANGE);
 
-  input_queue = xQueueCreate(input_queue_len, sizeof(Controll));
+  input_queue = xQueueCreate(input_queue_len, sizeof(Control));
   ISR_Semaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(ISR_Semaphore);
 };
@@ -118,7 +118,7 @@ void navigate(Controll cont) {
         switch (cont) {
           case CLICK: {
               page = SETTING;
-              setting = PROGRAMM;
+              setting = PROGRAM;
               editSetting = false;
               timeoutTime =  NORMAL_TIMEOUT;
             } break;
@@ -129,7 +129,7 @@ void navigate(Controll cont) {
               timeoutTime =  SHORT_TIMEOUT;
             } break;
           case LONG_CLICK: {
-             // programm = STANDBY;
+             // program = STANDBY;
             } break; //!!OFF
           case TIME_OUT: {} break;
         }
@@ -161,46 +161,46 @@ void navigate(Controll cont) {
           return;
         }
         switch (setting) {
-          case PROGRAMM: {
+          case PROGRAM: {
               if (editSetting) {
-                switch (programm) {
+                switch (program) {
                   case STANDBY: {
                       switch (cont) {
                         case CLK: {
-                            programm = ON;
+                            program = ON;
                           } break;
                         case ACLK: {
-                            programm = ON_LOW_POW;
+                            program = ON_LOW_POW;
                           }  break;
                       }
                     } break;
                   case ON: {
                       switch (cont) {
                         case CLK: {
-                            programm = ON_LOW_POW;
+                            program = ON_LOW_POW;
                           }  break;
                         case ACLK: {
-                            programm = STANDBY;
+                            program = STANDBY;
                           }  break;
                       }
                     } break;
                   case ON_LOW_POW: {
                       switch (cont) {
                         case CLK: {
-                            programm = STANDBY;
+                            program = STANDBY;
                           }  break;
                         case ACLK: {
-                            programm = ON;
+                            program = ON;
                           }  break;
                       }
                     } break;
-                  case ERROR_PROGRAMM: { //!!
+                  case ERROR_PROGRAM: { //!!
                       switch (cont) {
                         case CLK: {
-                            programm = STANDBY;
+                            program = STANDBY;
                           }  break;
                         case ACLK: {
-                            programm = ON_LOW_POW;
+                            program = ON_LOW_POW;
                           }  break;
                       }
                     } break;
@@ -252,7 +252,7 @@ void navigate(Controll cont) {
                       setting = WIFI;
                     }  break;
                   case ACLK: {
-                      setting = PROGRAMM;
+                      setting = PROGRAM;
                     }  break;
                 }
               }
@@ -304,7 +304,7 @@ void navigate(Controll cont) {
               editSetting = false; //to redo
               switch (cont) {
                 case CLK: {
-                    setting = PROGRAMM;
+                    setting = PROGRAM;
                   }  break;
                 case ACLK: {
                     setting = WEB_SERVER;

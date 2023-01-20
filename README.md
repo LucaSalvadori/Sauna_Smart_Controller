@@ -1,6 +1,6 @@
 # Sauna_Smart_Controller
  
-This project was born from the desire to build a custom sauna with a smart controller for temperature and humidity monitoring remote control and intelligent power management.
+This project was born from the desire to build a custom sauna with a smart controller for temperature and humidity monitoring, remote control and intelligent power management.
 
 ## Board features:
 * **ESP 32 WROOM 32** WiFi microcontoller
@@ -14,5 +14,7 @@ This project was born from the desire to build a custom sauna with a smart contr
 * Flexible display and rotary encoder mounting
 
 ## Software Features
+* temperature and humidity monitoring
+* relays controls with thermostat functionality and output power limit
 
 

@@ -20,7 +20,7 @@ static QueueHandle_t input_queue;
 
 static SemaphoreHandle_t ISR_Semaphore;
 
-enum Controll {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
+enum Control {CLK, ACLK, CLICK, LONG_CLICK, TIME_OUT};
 
 //encoder and switch
 static volatile long int millisLastEncoderChange =  0;
@@ -28,7 +28,7 @@ static volatile long int millisLastSwPress =  0;
 static volatile uint8_t stateEncoder = 0;
 static volatile bool switchPressed = 0;
 static volatile int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
-static Controll cBuff;
+static Control cBuff;
 static long int timeoutTime =  NORMAL_TIMEOUT;
 static long int millisTimeoutTime =  0;
 

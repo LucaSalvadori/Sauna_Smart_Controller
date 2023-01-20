@@ -20,6 +20,6 @@ static TwoWire I2C_2 = TwoWire(1);
 static Adafruit_SHT31 sht31;
 
 bool initHeater();
-void heaterControll();
+void heaterControl();
 
 #endif

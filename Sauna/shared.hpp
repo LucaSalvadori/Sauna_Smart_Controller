@@ -15,13 +15,13 @@ extern float hum;
 extern Pow_level power; //-!- d h
 extern Pow_level pow_max; //-!- c d h
 
- enum Programm {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAMM};
-extern Programm programm; //-!- c d h
+ enum Program {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAM};
+extern Program program; //-!- c d h
 
  enum Page {INFO, SETTING, ERROR_PAGE};
 extern Page page; //-!- c d
 
- enum Settings {TEMPERATURE, PROGRAMM, MAX_POW, WIFI, WEB_SERVER, ERRORS};
+ enum Settings {TEMPERATURE, PROGRAM, MAX_POW, WIFI, WEB_SERVER, ERRORS};
 extern Settings setting; //-!- c d
 extern bool editSetting; //-!- c d
 

@@ -17,14 +17,14 @@
  Pow_level power = ONE; //-!- d h
  Pow_level pow_max = TREE; //-!- c d h
 
- //enum Programm {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAMM};
- Programm programm = STANDBY; //-!- c d h
+ //enum Programm {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAM};
+ Program program = ON; //-!- c d h
 
  //enum Page {INFO, SETTING, ERROR_PAGE};
  Page page = INFO; //-!- c d
 
- //enum Settings {TEMPERATURE, PROGRAMM, MAX_POW, WIFI, WEB_SERVER, ERRORS};
- Settings setting = PROGRAMM; //-!- c d
+ //enum Settings {TEMPERATURE, PROGRAM, MAX_POW, WIFI, WEB_SERVER, ERRORS};
+ Settings setting = PROGRAM; //-!- c d
  bool editSetting = false; //-!- c d
 
  //enum Errors {ERR_b, ERR_a}; //tmp
@@ -46,7 +46,7 @@ void setup() {
 
   initHeater();
   initControls();
-  if (!initDispaly()) {
+  if (!initDisplay()) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;); // Don't proceed, loop forever
   }
@@ -78,7 +78,7 @@ void loop() {
       draw();
     }else if (i % 20 == 0) {
       draw();
-      heaterControll();
+      heaterControl();
     }
 
     vTaskDelay(10/portTICK_PERIOD_MS);

@@ -23,7 +23,7 @@
 static TwoWire I2C_1 = TwoWire(0);
 static Adafruit_SSD1306 display;
 
-bool initDispaly();
+bool initDisplay();
 void draw();
 void DrawInfo();
 void DrawSetting();

@@ -1,6 +1,6 @@
 #include "draw.hpp"
 
-bool initDispaly() {
+bool initDisplay() {
   
   I2C_1.begin(21, 22);
   display = Adafruit_SSD1306(S_W, S_H, &I2C_1, OLED_RESET);
@@ -38,10 +38,10 @@ void DrawSetting() {
         display.print((int) tmp_off);
         display.print(F(" c"));
       } break;
-    case PROGRAMM: {
+    case PROGRAM: {
         display.print(F("Programma"));
         display.setCursor(4, S_H - 8);
-        switch (programm) {
+        switch (program) {
           case STANDBY: {
               display.print(F("Standby"));
             } break;
@@ -51,7 +51,7 @@ void DrawSetting() {
           case ON_LOW_POW: {
               display.print(F("ECO"));
             } break;
-          case ERROR_PROGRAMM: {
+          case ERROR_PROGRAM: {
               display.print(F("ERROR"));
             } break;
         }

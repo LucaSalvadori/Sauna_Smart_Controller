@@ -19,7 +19,7 @@ bool initHeater() {
   return true;
 }
 
-void heaterControll() {
+void heaterControl() {
   //read temperature (!! is very slow)
  //  sensors.requestTemperatures(); // Send the command to get temperatures
 
@@ -58,8 +58,8 @@ void heaterControll() {
   }
   
 
-  //controll
-  if(programm == STANDBY){
+  //control
+  if(program == STANDBY){
     power = OFF;
   }else if (power == OFF) {
     if (tmp_int < tmp_off - TEMP_DELTA) {
