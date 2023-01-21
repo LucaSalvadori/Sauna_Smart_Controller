@@ -27,5 +27,6 @@ bool initDisplay();
 void draw();
 void DrawInfo();
 void DrawSetting();
+void TaskDraw(void *pvParameters);
 
 #endif

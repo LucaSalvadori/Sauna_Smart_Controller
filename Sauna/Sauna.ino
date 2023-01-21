@@ -1,3 +1,10 @@
+#if CONFIG_FREERTOS_UNICORE
+  #define ARDUINO_RUNNING_CORE 0
+#else
+  #define ARDUINO_RUNNING_CORE 1
+#endif
+
+
 //#include "shared.h"
 #include "draw.hpp"
 #include "controls.hpp"
@@ -37,7 +44,9 @@
 
 
 void setup() {
-  
+
+  vTaskDelay(50/portTICK_PERIOD_MS);
+
   Serial.begin(2000000);
   Serial.println(F("Smart Sauna : by Luca Salvadori"));
 
@@ -53,15 +62,25 @@ void setup() {
  // Serial.println(&page);
   
 
-  //   xTaskCreatePinnedToCore(
-  //      TaskBlink
-  //      ,  "TaskDisplay"   // A name just for humans
-  //      ,  1024  // This stack size can be checked & adjusted by reading the Stack Highwater
-  //      ,  NULL
-  //      ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
-  //      ,  NULL
-  //      ,  ARDUINO_RUNNING_CORE
-  //   );
+     xTaskCreatePinnedToCore(
+        TaskDraw
+        ,  "TaskDisplay"   // A name just for humans
+        ,  2048  // This stack size can be checked & adjusted by reading the Stack Highwater
+        ,  NULL
+        ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+        ,  NULL
+        ,  ARDUINO_RUNNING_CORE
+     );
+
+     xTaskCreatePinnedToCore(
+        TaskHeater
+        ,  "TaskHeater"   // A name just for humans
+        ,  2048  // This stack size can be checked & adjusted by reading the Stack Highwater
+        ,  NULL
+        ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+        ,  NULL
+        ,  ARDUINO_RUNNING_CORE
+     );
   
 }
 
@@ -74,13 +93,7 @@ void loop() {
 //      Serial.println(rotValueEncoder);
 //    }
 
-    if (input_read()){
-      draw();
-    }else if (i % 20 == 0) {
-      draw();
-      heaterControl();
-    }
-    
+    input_read();
     vTaskDelay(10/portTICK_PERIOD_MS);
   }
 }

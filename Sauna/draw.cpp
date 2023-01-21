@@ -166,3 +166,16 @@ void DrawInfo() {
 
   display.display(); // Show the display buffer on the screen
 }
+
+
+void TaskDraw(void *pvParameters)  // This is a task.
+{
+  (void) pvParameters;
+  for (;;) // A Task shall never return or exit.
+  {
+    while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE){Serial.print(F("BD ")); vTaskDelay(40);};
+    draw();
+    xSemaphoreGive(shared_Semaphore);
+    vTaskDelay(50/portTICK_PERIOD_MS);  // one tick delay (15ms) in between reads for stability
+  }
+}

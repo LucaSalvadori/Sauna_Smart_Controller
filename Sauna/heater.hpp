@@ -21,5 +21,6 @@ static Adafruit_SHT31 sht31;
 
 bool initHeater();
 void heaterControl();
+void TaskHeater(void *pvParameters);
 
 #endif

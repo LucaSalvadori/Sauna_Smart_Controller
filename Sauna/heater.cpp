@@ -44,11 +44,13 @@ void heaterControl() {
 
   sht31.readBoth(&t, &h); //!! internal 20ms delay
 
+  while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE){Serial.print(F(" BH")); vTaskDelay(50); };
+
   if (! isnan(t)) {  // check if 'is not a number'
     tmp_int = t;
-    Serial.print(F("Temp int *C = ")); Serial.print(tmp_int); Serial.print(F("\t\t"));
+    //Serial.print(F("Temp int *C = ")); Serial.print(tmp_int); Serial.print(F("\t\t"));
     hum = h;
-    Serial.print(F("Hum. % = ")); Serial.println(hum);
+   // Serial.print(F("Hum. % = ")); Serial.println(hum);
   } else { 
     Serial.println(F("Failed to read sht30"));
   }
@@ -68,6 +70,7 @@ void heaterControl() {
       power = pow_max;
     }
   }
+  xSemaphoreGive(shared_Semaphore);
 
   //relay update
     switch (power) {
@@ -93,4 +96,16 @@ void heaterControl() {
       }break;
     }
 
+}
+
+void TaskHeater(void *pvParameters)  // This is a task.
+{
+  (void) pvParameters;
+  for (;;) // A Task shall never return or exit.
+  {
+    
+    heaterControl();
+    
+    vTaskDelay(250/portTICK_PERIOD_MS);  // one tick delay (15ms) in between reads for stability
+  }
 }

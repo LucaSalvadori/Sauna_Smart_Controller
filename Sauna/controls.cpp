@@ -116,7 +116,8 @@ void IRAM_ATTR isrAB() {
 }
 
 void navigate(Control cont) {
-  //while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
+  while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE){Serial.print(F(" BC"));vTaskDelay(40);};
+
   Serial.println(cont);
 
   switch (page) {
@@ -149,6 +150,7 @@ void navigate(Control cont) {
         if (cont == TIME_OUT || cont == LONG_CLICK) {
           timeoutTime =  NORMAL_TIMEOUT;
           page = INFO;
+          xSemaphoreGive(shared_Semaphore);
           return;
         }
         if (setting == TEMPERATURE) {
@@ -164,11 +166,13 @@ void navigate(Control cont) {
                 timeoutTime =  NORMAL_TIMEOUT;
               } break;
           }
+          xSemaphoreGive(shared_Semaphore);
           return;
         }
 
         if (cont == CLICK) {
           editSetting = !editSetting;
+          xSemaphoreGive(shared_Semaphore);
           return;
         }
         switch (setting) {
@@ -328,5 +332,5 @@ void navigate(Control cont) {
         // da implm
       } break;
   }
- // xSemaphoreGive(shared_Semaphore);
+  xSemaphoreGive(shared_Semaphore);
 }
