@@ -17,8 +17,8 @@
  Pow_level power = ONE; //-!- d h
  Pow_level pow_max = TREE; //-!- c d h
 
- //enum Programm {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAM};
- Program program = ON; //-!- c d h
+ //enum Program {STANDBY, ON, ON_LOW_POW, ERROR_PROGRAM};
+ Program program = STANDBY; //-!- c d h
 
  //enum Page {INFO, SETTING, ERROR_PAGE};
  Page page = INFO; //-!- c d
@@ -68,7 +68,7 @@ void setup() {
 void loop() {
   for (int i = 0; true; i++) {
 //    if (i % 30 == 0) {
-//      Serial.print("SW ");
+ //     Serial.print("SW ------");
 //      Serial.print(swNTimesPressed);
 //      Serial.print(" Encoder ");
 //      Serial.println(rotValueEncoder);
@@ -80,7 +80,7 @@ void loop() {
       draw();
       heaterControl();
     }
-
+    
     vTaskDelay(10/portTICK_PERIOD_MS);
   }
 }

@@ -12,7 +12,7 @@ void initControls() {
   input_queue = xQueueCreate(input_queue_len, sizeof(Control));
   ISR_Semaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(ISR_Semaphore);
-};
+}
 
 bool input_read() {
   bool S_update = false;
@@ -26,10 +26,11 @@ bool input_read() {
     bool timeout = (millisTimeoutTime < millisTime && !switchPressed); 
     bool longPress = (switchPressed && millisLastSwPress + 1000 < millisTime);
     xSemaphoreGive(ISR_Semaphore);
-    if (longPress) {
+    if (longPress && !consumedLongPress) {
       navigate(LONG_CLICK);
       resetTimeout();
       S_update = true;
+      consumedLongPress = true;
     }
     if (timeout) {
       navigate(TIME_OUT);
@@ -47,6 +48,7 @@ void resetTimeout(){
 
 
 void IRAM_ATTR isrSW() {
+  //Serial.print("S");
   long int encoderMillis =  millis();
   BaseType_t task_woken = pdFALSE;
   if (xSemaphoreTakeFromISR(ISR_Semaphore, &task_woken) == pdTRUE) { //!!
@@ -54,11 +56,13 @@ void IRAM_ATTR isrSW() {
       if (switchPressed) {
         switchPressed = false;
         if (millisLastSwPress + 1000 > encoderMillis) { //ignore long press
-          swNTimesPressed++;
+         // swNTimesPressed++;
           if (xQueueIsQueueFullFromISR( input_queue ) == pdFALSE) {
             cBuff = CLICK;
             xQueueSendToBackFromISR(input_queue, (void *)&cBuff, &task_woken);
           }
+        }else{
+          consumedLongPress = false;
         }
       } else {
         switchPressed = true;
@@ -111,8 +115,10 @@ void IRAM_ATTR isrAB() {
   }
 }
 
-void navigate(Controll cont) {
+void navigate(Control cont) {
   //while (xSemaphoreTake(shared_Semaphore, 10) == pdFALSE);
+  Serial.println(cont);
+
   switch (page) {
     case INFO: {
         switch (cont) {
@@ -129,7 +135,12 @@ void navigate(Controll cont) {
               timeoutTime =  SHORT_TIMEOUT;
             } break;
           case LONG_CLICK: {
-             // program = STANDBY;
+              if(program != STANDBY){
+                program = STANDBY;
+              }else{
+                program = ON;
+              }
+              
             } break; //!!OFF
           case TIME_OUT: {} break;
         }

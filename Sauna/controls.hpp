@@ -27,14 +27,15 @@ static volatile long int millisLastEncoderChange =  0;
 static volatile long int millisLastSwPress =  0;
 static volatile uint8_t stateEncoder = 0;
 static volatile bool switchPressed = 0;
-static volatile int rotValueEncoder = 0, swNTimesPressed = 0, lastRotValueEncoder = 0, lastSwNTimesPressed = 0;
+static volatile bool consumedLongPress = 0;
+static volatile int rotValueEncoder = 0, lastRotValueEncoder = 0; // lastSwNTimesPressed = 0, swNTimesPressed = 0;
 static Control cBuff;
 static long int timeoutTime =  NORMAL_TIMEOUT;
 static long int millisTimeoutTime =  0;
 
 bool input_read();
 void initControls();
-void navigate(Controll cont);
+void navigate(Control cont);
 void IRAM_ATTR isr_rotary_encoder();
 void IRAM_ATTR isrAB();
 void IRAM_ATTR isrSW();

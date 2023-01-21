@@ -40,21 +40,17 @@ void heaterControl() {
 
 
 
-  float t = sht31.readTemperature();
-  float h = sht31.readHumidity();
+  float t, h;
+
+  sht31.readBoth(&t, &h); //!! internal 20ms delay
 
   if (! isnan(t)) {  // check if 'is not a number'
     tmp_int = t;
-    Serial.print(F("Temp int *C = ")); Serial.print(t); Serial.print(F("\t\t"));
-  } else { 
-    Serial.println(F("Failed to read int temperature"));
-  }
-  
-  if (! isnan(h)) {  // check if 'is not a number'
+    Serial.print(F("Temp int *C = ")); Serial.print(tmp_int); Serial.print(F("\t\t"));
     hum = h;
-    Serial.print(F("Hum. % = ")); Serial.println(h);
+    Serial.print(F("Hum. % = ")); Serial.println(hum);
   } else { 
-    Serial.println(F("Failed to read humidity"));
+    Serial.println(F("Failed to read sht30"));
   }
   
 
