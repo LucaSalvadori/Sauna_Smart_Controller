@@ -13,7 +13,11 @@ bool initHeater() {
   sht31 = Adafruit_SHT31(&I2C_2);
   
   if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
-    Serial.println("Couldn't find SHT31");
+    Serial.println("Couldn't find SHT30");
+  }
+  if(sht31.isHeaterEnabled()){
+    Serial.println("SHT30 Heater is enabled");
+    sht31.heater(false);
   }
   
   return true;
