@@ -1,15 +1,15 @@
-#ifndef _WIFI_
-#define _WIFI_
+// #ifndef _WIFI_
+// #define _WIFI_
 
-#include "wifiPass.hpp"
-#include "shared.hpp"
-#include <WiFi.h>
+// #include "wifiPass.hpp"
+// #include "shared.hpp"
+// #include <WiFi.h>
 
-external const char* ssid;
-external const char* password;
+// external const char* ssid;
+// external const char* password;
 
-WiFiServer server(80);
+// WiFiServer server(80);
 
-bool initWifi();
+// bool initWifi();
 
-#endif
+// #endif

@@ -44,11 +44,10 @@
 
 
 void setup() {
-
-  vTaskDelay(50/portTICK_PERIOD_MS);
-
+  delay(200);
   Serial.begin(2000000);
   Serial.println(F("Smart Sauna : by Luca Salvadori"));
+  delay(200);
 
   shared_Semaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(shared_Semaphore);
