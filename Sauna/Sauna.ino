@@ -9,6 +9,7 @@
 #include "draw.hpp"
 #include "controls.hpp"
 #include "heater.hpp"
+#include "wifi.hpp"
 
 #include <SPI.h>
 #include <Wire.h>
