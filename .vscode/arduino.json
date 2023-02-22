@@ -4,5 +4,4 @@
     "sketch": "Sauna\\Sauna.ino",
     "output": "../build",
     "port": "COM5"
-
 }

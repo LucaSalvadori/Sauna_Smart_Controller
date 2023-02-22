@@ -15,6 +15,7 @@ bool initHeater() {
   if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
     Serial.println("Couldn't find SHT30");
   }
+  
   if(sht31.isHeaterEnabled()){
     Serial.println("SHT30 Heater is enabled");
     sht31.heater(false);
