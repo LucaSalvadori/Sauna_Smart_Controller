@@ -1,0 +1,18 @@
+# Example configuration entry
+i2c:
+  - id: bus_a
+    sda: 21
+    scl: 22
+    scan: true
+  - id: bus_b
+    sda: 4
+    scl: 17
+    scan: true
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    i2c_id: bus_b
+    lambda: |-
+      it.print(0, 0, id(font), "Hello World!");
