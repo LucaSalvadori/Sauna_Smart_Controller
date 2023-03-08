@@ -1,8 +1,12 @@
 esphome:
   name: "thermostat-kitchen"
   platform: ESP32
-  board: 
 
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
   # on_boot:
   #   priority: -100.0
   #   then:
@@ -17,8 +21,8 @@ substitutions:
   default_hi: "28"
 wifi:
   networks:
-    - ssid: !secret wifi_ssid
-      password: !secret wifi_password
+    - ssid: !secret FRITZGERALD-Box
+      password: !secret famiglia12
 
 logger:
   logs:
