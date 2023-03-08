@@ -1,17 +1,16 @@
 esphome:
   name: "thermostat-kitchen"
-  platform: ESP32
-
+  on_boot:
+     priority: -100.0
+     then:
+       #- switch.turn_on: dallas_power
+       - lambda: "id(oled_contrast).publish_state(0.4);"
 
 esp32:
   board: esp32dev
   framework:
     type: arduino
-  # on_boot:
-  #   priority: -100.0
-  #   then:
-  #     - switch.turn_on: dallas_power
-  #     - lambda: "id(oled_contrast).publish_state(0.4);"
+   
 
 substitutions:
   room: Kitchen # Room Name
@@ -21,8 +20,8 @@ substitutions:
   default_hi: "28"
 wifi:
   networks:
-    - ssid: !secret FRITZGERALD-Box
-      password: !secret famiglia12
+    - ssid: FRITZGERALD-Box
+      password: famiglia12
 
 logger:
   logs:
@@ -183,10 +182,10 @@ sensor:
   - platform: rotary_encoder
     id: encoder
     pin_a:
-      number: D36
+      number: 36
       mode: INPUT
     pin_b:
-      number: D39
+      number: 39
       mode: INPUT
     on_clockwise:
       - if:
@@ -243,7 +242,7 @@ display:
     model: "SH1106 128x64"
     rotation: 180
     address: 0x3C
-    i2c_id: bus_b
+    i2c_id: bus_a
     lambda: |-
       if (id(fire).state) {id(ani_fire).next_frame(); it.image(0, 0, id(ani_fire));}
       else if (id(cool).state) {id(ani_fan).next_frame(); it.image(0, 0, id(ani_fan));}
