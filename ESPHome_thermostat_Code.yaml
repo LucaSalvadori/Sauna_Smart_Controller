@@ -110,12 +110,13 @@ climate:
 
 output:
   - platform : template
-    id : load_pow_out
+    id : load_pow_int
+    name : "Power_Load"
     type : float
-    write_action:
+    write_action : 
       - sensor.template.publish:
         id: load_pow
-        state: !lambda "return state;"
+        state: !lambda "return state"
 
 sensor:
   - platform: template
@@ -149,7 +150,8 @@ sensor:
       number: GPIO39
       mode: INPUT
     on_anticlockwise:
-      - if:
+      then:
+        - if:
           condition:
             switch.is_on: brightness
           then:
@@ -171,7 +173,7 @@ sensor:
                       id: this_thermostat
                       target_temperature_low: !lambda "return id(this_thermostat).target_temperature_low + 0.5;"
 
-      on_clockwise:
+    on_clockwise:
       then:
         - if:
             condition:
