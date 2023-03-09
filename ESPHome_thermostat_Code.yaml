@@ -3,7 +3,7 @@ esphome:
   on_boot:
      priority: -100.0
      then:
-       - lambda: "id(oled_contrast).publish_state(0.4);"
+       - lambda: "id(oled_contrast).publish_state(0.4); id(load_pow).publish_state(1200);"
 
 esp32:
   board: esp32dev
@@ -70,12 +70,12 @@ binary_sensor:
 
 climate:
   - platform: thermostat
-    min_heating_off_time: 0s
-    min_heating_run_time: 0s
-    min_idle_time: 0s
+    min_heating_off_time: 10s
+    min_heating_run_time: 10s
+    min_idle_time: 10s
     visual:
       min_temperature: 15 °C
-      max_temperature: 90 °C
+      max_temperature: 50 °C
     name: "${room} Thermostat"
     id: this_thermostat
     sensor: internal_temperature
@@ -130,11 +130,14 @@ sensor:
 
   - platform: rotary_encoder
     id: encoder
+    resolution : 4
     pin_a:
       number: GPIO39
+      inverted : true
       mode: INPUT
     pin_b:
       number: GPIO36
+      inverted : true
       mode: INPUT
     on_clockwise:
       - if:
@@ -154,8 +157,6 @@ sensor:
                   - sensor.template.publish:
                       id: load_pow
                       state: !lambda "return id(load_pow).state + 50;"
-                  - lambda: |-
-                      id(oled1).set_contrast( id(load_pow).state );
                 else:
                   - climate.control:
                       id: this_thermostat
@@ -180,8 +181,6 @@ sensor:
                     - sensor.template.publish:
                         id: load_pow
                         state: !lambda "return id(load_pow).state - 50;"
-                    - lambda: |-
-                        id(oled1).set_contrast( id(load_pow).state);
                   else:
                     - climate.control:
                         id: this_thermostat
@@ -203,9 +202,14 @@ display:
       it.print(64, 0,  id(font1), TextAlign::TOP_CENTER, "${room}");
       it.printf(128, 0,  id(font4), TextAlign::TOP_RIGHT, " %.1f%% ", id(internal_humidity).state);
 
-      it.printf(64, 4, id(font2), TextAlign::TOP_CENTER, " %.1f°", id(internal_temperature).state);
+      if (id(heat_pow).state) {
+        it.printf(64, 4, id(font3), TextAlign::TOP_CENTER, " %.1fW", id(power_meter).state);
+      }else{
+        it.printf(64, 4, id(font2), TextAlign::TOP_CENTER, " %.1f°", id(internal_temperature).state);
+      }
+
       it.printf(0, 64, id(font3), TextAlign::BASELINE_LEFT, "L:%.1f°", id(this_thermostat).target_temperature_low);
-      it.printf(128, 64, id(font3), TextAlign::BASELINE_RIGHT, "H:%.0fW", id(power_meter).state);
+      it.printf(128, 64, id(font3), TextAlign::BASELINE_RIGHT, "H:%.0fW", id(load_pow).state);
 
       if (id(brightness).state) {it.image(56, 51, id(bulb));} 
       else if (id(heat_pow).state) {it.image(56, 51, id(arrow_right));}
