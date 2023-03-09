@@ -111,12 +111,11 @@ climate:
 output:
   - platform : template
     id : load_pow_int
-    name : "Power_Load"
     type : float
     write_action : 
       - sensor.template.publish:
-        id: load_pow
-        state: !lambda "return state"
+          id: load_pow
+          state: !lambda "return state"
 
 sensor:
   - platform: template
@@ -128,6 +127,15 @@ sensor:
     id: power_meter
     entity_id: sensor.power_meter_active_power
     internal: true
+    on_value_range:
+      - below: !lambda "return id(load_pow).state - 10;"
+        then:
+          - switch.turn_off: relay_heater
+          - lambda: id(fire).publish_state(false);
+      - above: !lambda "return id(load_pow).state + 100;"
+        then:
+          - switch.turn_on: relay_heater
+          - lambda: id(fire).publish_state(true);
 
   - platform: sht3xd
     temperature:
@@ -149,15 +157,14 @@ sensor:
     pin_b:
       number: GPIO39
       mode: INPUT
-    on_anticlockwise:
-      then:
-        - if:
+    on_clockwise:
+      - if:
           condition:
             switch.is_on: brightness
           then:
             - sensor.template.publish:
                 id: oled_contrast
-                state: !lambda "return id(oled_contrast).state + 0.02;"
+                state: !lambda "return id(oled_contrast).state - 0.02;"
             - lambda: |-
                 id(oled1).set_contrast( id(oled_contrast).state );
           else:
@@ -167,13 +174,13 @@ sensor:
                 then:
                   - sensor.template.publish:
                       id: load_pow
-                      state: !lambda "return id(load_pow).state + 50;"
+                      state: !lambda "return id(load_pow).state - 50;"
                 else:
                   - climate.control:
                       id: this_thermostat
-                      target_temperature_low: !lambda "return id(this_thermostat).target_temperature_low + 0.5;"
+                      target_temperature_low: !lambda "return id(this_thermostat).target_temperature_low - 0.5;"
 
-    on_clockwise:
+    on_anticlockwise:
       then:
         - if:
             condition:
@@ -181,7 +188,7 @@ sensor:
             then:
               - sensor.template.publish:
                   id: oled_contrast
-                  state: !lambda "return id(oled_contrast).state - 0.02;"
+                  state: !lambda "return id(oled_contrast).state + 0.02;"
               - lambda: |-
                   id(oled1).set_contrast( id(oled_contrast).state);
             else:
@@ -191,11 +198,11 @@ sensor:
                   then:
                     - sensor.template.publish:
                         id: load_pow
-                        state: !lambda "return id(load_pow).state - 50;"
+                        state: !lambda "return id(load_pow).state + 50;"
                   else:
                     - climate.control:
                         id: this_thermostat
-                        target_temperature_low: !lambda "return id(this_thermostat).target_temperature_low - 0.5;"
+                        target_temperature_low: !lambda "return id(this_thermostat).target_temperature_low + 0.5;"
 
 display:
   - platform: ssd1306_i2c
@@ -214,7 +221,7 @@ display:
       it.printf(128, 0,  id(font4), TextAlign::TOP_RIGHT, " %.1f%% ", id(internal_humidity).state);
 
       if (id(heat_pow).state) {
-        it.printf(64, 4, id(font5), TextAlign::TOP_CENTER, " %.0fW", id(power_meter).state);
+        it.printf(64, 7, id(font5), TextAlign::TOP_CENTER, " %.0fW", id(power_meter).state);
       }else{
         it.printf(64, 4, id(font2), TextAlign::TOP_CENTER, " %.1f°", id(internal_temperature).state);
       }
