@@ -42,6 +42,7 @@ switch:
     id: relay_heater
     pin: GPIO33
     inverted: false
+    name : "relay heater"
   - platform: template
     id: brightness
     optimistic: true
@@ -106,6 +107,16 @@ climate:
           data:
             entity_id: $entity_heater
 
+
+output:
+  - platform : template
+    id : load_pow_out
+    type : float
+    write_action:
+      - sensor.template.publish:
+        id: load_pow
+        state: !lambda "return state;"
+
 sensor:
   - platform: template
     id: oled_contrast
@@ -130,16 +141,14 @@ sensor:
 
   - platform: rotary_encoder
     id: encoder
-    resolution : 4
+    resolution : 2
     pin_a:
-      number: GPIO39
-      inverted : true
+      number: GPIO36
       mode: INPUT
     pin_b:
-      number: GPIO36
-      inverted : true
+      number: GPIO39
       mode: INPUT
-    on_clockwise:
+    on_anticlockwise:
       - if:
           condition:
             switch.is_on: brightness
@@ -162,7 +171,7 @@ sensor:
                       id: this_thermostat
                       target_temperature_low: !lambda "return id(this_thermostat).target_temperature_low + 0.5;"
 
-    on_anticlockwise:
+      on_clockwise:
       then:
         - if:
             condition:
@@ -203,13 +212,13 @@ display:
       it.printf(128, 0,  id(font4), TextAlign::TOP_RIGHT, " %.1f%% ", id(internal_humidity).state);
 
       if (id(heat_pow).state) {
-        it.printf(64, 4, id(font3), TextAlign::TOP_CENTER, " %.1fW", id(power_meter).state);
+        it.printf(64, 4, id(font5), TextAlign::TOP_CENTER, " %.0fW", id(power_meter).state);
       }else{
         it.printf(64, 4, id(font2), TextAlign::TOP_CENTER, " %.1f°", id(internal_temperature).state);
       }
 
-      it.printf(0, 64, id(font3), TextAlign::BASELINE_LEFT, "L:%.1f°", id(this_thermostat).target_temperature_low);
-      it.printf(128, 64, id(font3), TextAlign::BASELINE_RIGHT, "H:%.0fW", id(load_pow).state);
+      it.printf(0, 64, id(font3), TextAlign::BASELINE_LEFT, "%.1f°", id(this_thermostat).target_temperature_low);
+      it.printf(128, 64, id(font3), TextAlign::BASELINE_RIGHT, "%.0fW", id(load_pow).state);
 
       if (id(brightness).state) {it.image(56, 51, id(bulb));} 
       else if (id(heat_pow).state) {it.image(56, 51, id(arrow_right));}
@@ -241,3 +250,6 @@ font:
   - file: "_fonts/refsan.ttf"
     id: font4
     size: 10
+  - file: "_fonts/refsan.ttf"
+    id: font5
+    size: 30
