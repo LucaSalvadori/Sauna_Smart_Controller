@@ -43,13 +43,21 @@ switch:
     pin: GPIO33
     inverted: false
     name : "relay heater"
+
+  - platform: gpio
+    id: info_LED
+    pin: GPIO2
+    inverted: false
+    name : "info LED"
+
   - platform: template
     id: brightness
     optimistic: true
+
   - platform: template
     id: heat_pow
     optimistic: true
-    
+
 binary_sensor:
   - platform: template
     id: fire
@@ -93,6 +101,7 @@ climate:
 
     heat_action:
       - switch.turn_on: relay_heater
+      - switch.turn_on: info_LED
       - lambda: id(fire).publish_state(true);
       - homeassistant.service:
           service: homeassistant.turn_on
@@ -101,6 +110,7 @@ climate:
 
     idle_action:
       - switch.turn_off: relay_heater
+      - switch.turn_off: info_LED
       - lambda: id(fire).publish_state(false);
       - homeassistant.service:
           service: homeassistant.turn_off
@@ -115,7 +125,7 @@ output:
     write_action : 
       - sensor.template.publish:
           id: load_pow
-          state: !lambda "return state"
+          state: !lambda "return state;"
 
 sensor:
   - platform: template
@@ -128,14 +138,27 @@ sensor:
     entity_id: sensor.power_meter_active_power
     internal: true
     on_value_range:
-      - below: !lambda "return id(load_pow).state - 10;"
-        then:
-          - switch.turn_off: relay_heater
-          - lambda: id(fire).publish_state(false);
+      
+      - below: 10
+          then:
+            - if:
+                condition:
+                  switch.is_on: relay_heater
+                then:
+                  - switch.turn_off: relay_heater
+                  - switch.turn_off: info_LED
+                  - lambda: id(fire).publish_state(false);
+                  - logger.log: Heat OFF
       - above: !lambda "return id(load_pow).state + 100;"
-        then:
-          - switch.turn_on: relay_heater
-          - lambda: id(fire).publish_state(true);
+          then:
+            - if:
+                condition:
+                  switch.is_off: relay_heater
+                then:
+                  - switch.turn_on: relay_heater
+                  - switch.turn_on: info_LED
+                  - lambda: id(fire).publish_state(true);
+                  - logger.log: Heat ON
 
   - platform: sht3xd
     temperature:
