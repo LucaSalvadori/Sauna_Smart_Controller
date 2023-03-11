@@ -138,27 +138,26 @@ sensor:
     entity_id: sensor.power_meter_active_power
     internal: true
     on_value_range:
-      
       - below: 10
-          then:
-            - if:
-                condition:
-                  switch.is_on: relay_heater
-                then:
-                  - switch.turn_off: relay_heater
-                  - switch.turn_off: info_LED
-                  - lambda: id(fire).publish_state(false);
-                  - logger.log: Heat OFF
+        then:
+          if:
+            condition:
+              switch.is_on: relay_heater
+            then:
+              - switch.turn_off: relay_heater
+              - switch.turn_off: info_LED
+              - lambda: id(fire).publish_state(false);
+              - logger.log: Heat OFF
       - above: !lambda "return id(load_pow).state + 100;"
-          then:
-            - if:
-                condition:
-                  switch.is_off: relay_heater
-                then:
-                  - switch.turn_on: relay_heater
-                  - switch.turn_on: info_LED
-                  - lambda: id(fire).publish_state(true);
-                  - logger.log: Heat ON
+        then:
+          if:
+            condition:
+              switch.is_off: relay_heater
+            then:
+              - switch.turn_on: relay_heater
+              - switch.turn_on: info_LED
+              - lambda: id(fire).publish_state(true);
+              - logger.log: Heat ON
 
   - platform: sht3xd
     temperature:
